@@ -30,8 +30,15 @@ class ChirpstackPayloadBatteryMessage(BaseModel):
     measurementValue: float
 
 
-class ChirpstackPayloadLocationMessage(BaseModel):
-    type: str = Field(pattern="^(Latitude|Longitude)$")
+class ChirpstackPayloadLatitudeMessage(BaseModel):
+    type: str = Field(pattern="^Latitude$")
+    timestamp: float
+    measurementId: str
+    measurementValue: float
+
+
+class ChirpstackPayloadLongitudeMessage(BaseModel):
+    type: str = Field(pattern="^Longitude$")
     timestamp: float
     measurementId: str
     measurementValue: float
@@ -41,7 +48,8 @@ class ChirpstackPayloadObject(BaseModel):
     valid: bool
     payload: str
     err: float
-    messages: list[Union[ChirpstackPayloadBatteryMessage, ChirpstackPayloadLocationMessage, ChirpstackPayloadMessage]]
+    # WTF, why is the decoder designed that way?
+    messages: list[list[Union[ChirpstackPayloadBatteryMessage, ChirpstackPayloadLatitudeMessage, ChirpstackPayloadLongitudeMessage, ChirpstackPayloadMessage]]]
 
 
 class ChirpstackBaseEventModel(BaseModel):
