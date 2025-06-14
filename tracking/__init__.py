@@ -3,9 +3,17 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from tracking.api import api_router
+from tracking.db import models, engine
 from tracking.socket import socket
+
+__version__ = "1.0.0"
+
+# Create all models from
+models.Base.metadata.create_all(bind=engine)
+
 app = FastAPI(
-    summary="Backend server for display software"
+    summary="Backend server for display software",
+    version=__version__
 )
 
 #app.add_middleware(
