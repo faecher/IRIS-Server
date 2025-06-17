@@ -2,6 +2,10 @@ import asyncio
 
 import socketio
 
+from tracking.dependencies import get_db
+from tracking.db.models import Tracker
+from tracking.models import TrackerModel
+
 socket = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*")
 
 
@@ -18,9 +22,22 @@ def disconnect(sid):
     print('A client disconnected!', sid)
 
 
-@socket.on("register")
-def register_event(sid, data):
-    print("Register event")
+@socket.on("requestTrackerData")
+async def request_tracker_data(sid, data):
+    print("Requesting tracker data")
+
+    # Get the database
+    db = next(get_db())
+
+    trackers = db.query(Tracker).all()
+
+    # TODO: Fix & finish the type conversion
+    response = []
+    for tracker in trackers:
+        a = TrackerModel.model_validate(tracker).model_dump()
+        response.append(a)
+
+    await socket.emit('getTrackerData', {"devices": []})
 
 
 @socket.on("updated_view")

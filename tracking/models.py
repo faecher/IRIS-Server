@@ -62,3 +62,16 @@ class ChirpstackUpEventModel(ChirpstackBaseEventModel):
     devAddr: str
     # ignoring a lot of other attributes
     object: ChirpstackPayloadObject
+
+
+class TrackerModel(BaseModel):
+    id: int
+    deviceEUI: str
+    name: str
+    battery: float
+    long: float
+    lat: float
+    lastUpdated: str
+
+    class Config:
+        from_attributes = True
