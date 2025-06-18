@@ -30,14 +30,13 @@ async def request_tracker_data(sid, data):
     db = next(get_db())
 
     trackers = db.query(Tracker).all()
-
-    # TODO: Fix & finish the type conversion
+    # Convert all sqlalchemy objects to pydantic models for serialization
     response = []
     for tracker in trackers:
         a = TrackerModel.model_validate(tracker).model_dump()
         response.append(a)
 
-    await socket.emit('getTrackerData', {"devices": []})
+    await socket.emit('getTrackerData', {"devices": response})
 
 
 @socket.on("updated_view")

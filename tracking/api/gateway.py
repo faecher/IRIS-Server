@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from tracking.db.crud import get_tracker_by_eui, create_tracker, update_tracker
 from tracking.dependencies import get_db
 from tracking.models import ChirpstackBaseEventModel, ChirpstackUpEventModel
+from tracking.socket import request_tracker_data
 
 gateway_router = APIRouter(
     prefix="/gateway", tags=["gateway"])
@@ -34,5 +35,8 @@ async def up_event(event: str, data: Union[ChirpstackUpEventModel, ChirpstackBas
     else:
         print("Tracker found, updating data")
         update_tracker(db, data)
+        
+    # Emit data update
+    await request_tracker_data(sid=None, data=None)
 
     return {"status": "success"}

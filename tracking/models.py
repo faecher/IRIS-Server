@@ -71,7 +71,7 @@ class TrackerModel(BaseModel):
     battery: float
     long: float
     lat: float
-    lastUpdated: str
+    lastUpdated: int
 
     class Config:
         from_attributes = True
