@@ -1,4 +1,5 @@
-from sqlalchemy import func
+from datetime import datetime
+
 from sqlalchemy.orm import Session
 
 from tracking.db.models import Tracker
@@ -43,21 +44,26 @@ def update_tracker(db: Session, model: ChirpstackUpEventModel):
     if tracker is None:
         return None
 
+    has_update = False
+
     # Check if the request contains messages
     if len(model.object.messages) > 0 and len(model.object.messages[0]) > 0:
         for item in model.object.messages[0]:
             # Check for a battery message
             if isinstance(item, ChirpstackPayloadBatteryMessage):
-                tracker.battery = item.measurementValue
+                if int(item.timestamp / 1000) > tracker.lastUpdated:
+                    tracker.battery = item.measurementValue
             # Check for a location message
             if isinstance(item, ChirpstackPayloadLatitudeMessage):
-                tracker.lat = item.measurementValue
+                if int(item.timestamp / 1000) > tracker.lastUpdated:
+                    tracker.lat = item.measurementValue
             if isinstance(item, ChirpstackPayloadLongitudeMessage):
-                tracker.long = item.measurementValue
+                if int(item.timestamp / 1000) > tracker.lastUpdated:
+                    tracker.long = item.measurementValue
 
-    # Update timestamp
-    # -> it might be considered to parse the timestamp data for a more accurate measure
-    tracker.lastUpdated = func.current_timestamp()
+    # Update timestamp, if there was a data update
+    if has_update:
+        tracker.lastUpdated = int(datetime.now().timestamp())
 
     db.commit()
     db.refresh(tracker)
