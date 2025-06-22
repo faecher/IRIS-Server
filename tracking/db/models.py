@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Integer, String, Float
+from sqlalchemy import Integer, String, Float, Boolean
 
 from tracking.db import Base, Column
 
@@ -24,9 +24,20 @@ class Operation(Base):
 
     id = Column(Integer, primary_key=True)
 
+    uid = Column(String)
+    title = Column(String)
+    active = Column(Boolean)
+    archived = Column(Boolean)
+    # ignore all other attributes
+    selected = Column(Boolean, default=False)
+
 
 class Team(Base):
     # MCP class
     __tablename__ = 'tableuItems'
 
     id = Column(Integer, primary_key=True)
+
+    name = Column(String)
+    type = Column(String)
+    status = Column(Integer)
