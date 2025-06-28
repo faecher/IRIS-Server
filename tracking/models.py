@@ -75,3 +75,12 @@ class TrackerModel(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class MCPConfig(BaseModel):
+    url: str
+    api_key: str
+
+
+class MCPOperationConfig(BaseModel):
+    uid: str

@@ -1,8 +1,9 @@
 from datetime import datetime
+from typing import Union
 
 from sqlalchemy.orm import Session
 
-from tracking.db.models import Tracker
+from tracking.db.models import Tracker, Operation
 from tracking.models import ChirpstackUpEventModel, ChirpstackPayloadBatteryMessage, ChirpstackPayloadLongitudeMessage, \
     ChirpstackPayloadLatitudeMessage
 
@@ -71,3 +72,7 @@ def update_tracker(db: Session, model: ChirpstackUpEventModel):
     db.commit()
     db.refresh(tracker)
     return tracker
+
+
+def get_operation_by_uid(db: Session, uid: str) -> Union[None, Operation]:
+    return db.query(Operation).filter(Operation.uid == uid).one_or_none()
