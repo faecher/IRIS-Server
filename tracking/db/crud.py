@@ -53,13 +53,16 @@ def update_tracker(db: Session, model: ChirpstackUpEventModel):
             if isinstance(item, ChirpstackPayloadBatteryMessage):
                 if int(item.timestamp / 1000) > tracker.lastUpdated:
                     tracker.battery = item.measurementValue
+                    has_update = True
             # Check for a location message
             if isinstance(item, ChirpstackPayloadLatitudeMessage):
                 if int(item.timestamp / 1000) > tracker.lastUpdated:
                     tracker.lat = item.measurementValue
+                    has_update = True
             if isinstance(item, ChirpstackPayloadLongitudeMessage):
                 if int(item.timestamp / 1000) > tracker.lastUpdated:
                     tracker.long = item.measurementValue
+                    has_update = True
 
     # Update timestamp, if there was a data update
     if has_update:
