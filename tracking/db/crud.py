@@ -3,9 +3,9 @@ from typing import Union
 
 from sqlalchemy.orm import Session
 
-from tracking.db.models import Tracker, Operation
+from tracking.db.models import Tracker, Operation, Resource
 from tracking.models import ChirpstackUpEventModel, ChirpstackPayloadBatteryMessage, ChirpstackPayloadLongitudeMessage, \
-    ChirpstackPayloadLatitudeMessage
+    ChirpstackPayloadLatitudeMessage, MCPTablueItem
 
 
 def get_tracker_by_id(db: Session, instance_id: int):
@@ -76,3 +76,40 @@ def update_tracker(db: Session, model: ChirpstackUpEventModel):
 
 def get_operation_by_uid(db: Session, uid: str) -> Union[None, Operation]:
     return db.query(Operation).filter(Operation.uid == uid).one_or_none()
+
+
+def get_resource_by_id(db: Session, id: str) -> Union[None, Resource]:
+    return db.query(Resource).filter(Resource.id == id).one_or_none()
+
+
+def get_resource_by_uid(db: Session, uid: str) -> Union[None, Resource]:
+    return db.query(Resource).filter(Resource.uid == uid).one_or_none()
+
+
+def create_resource(db: Session, model: MCPTablueItem) -> Resource:
+
+    resource = Resource(
+        uid=model.resource.id,
+        name=model.resource.name,
+        type=model.resource.type,
+        status=model.status
+    )
+
+    db.add(resource)
+    db.commit()
+    db.refresh(resource)
+    return resource
+
+
+def update_resource(db: Session, model: MCPTablueItem):
+    resource = get_resource_by_uid(db, model.resource.uid)
+    if resource is None:
+        return None
+
+    resource.name = model.resource.name
+    resource.type = model.resource.type
+    resource.status = model.status
+
+    db.commit()
+    db.refresh(resource)
+    return resource

@@ -84,3 +84,22 @@ class MCPConfig(BaseModel):
 
 class MCPOperationConfig(BaseModel):
     uid: str
+
+
+class MCPResource(BaseModel):
+    name: str
+    type: str
+    id: str
+
+    class Config:
+        from_attributes = True
+
+
+class MCPTablueItem(BaseModel):
+    id: str
+    operationId: str
+    resource: MCPResource
+    status: int
+
+    class Config:
+        from_attributes = True

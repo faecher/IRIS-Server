@@ -89,9 +89,3 @@ async def get_config(db: Session = Depends(get_db)):
     }
 
     return result
-
-
-@mcp_router.post("/config")
-def set_config():
-    return {}
-

@@ -1,8 +1,10 @@
 import requests
 
 from tracking import Settings
+from tracking.db.crud import get_resource_by_uid, create_resource, update_resource
 from tracking.db.models import Operation
 from tracking.dependencies import get_db
+from tracking.models import MCPTablueItem
 
 
 async def get_mcp_data():
@@ -45,8 +47,18 @@ async def get_mcp_data():
                                        headers={"Api-Key": settings.mcp_api_key, "accept": "*/*"},
                                        verify=False)
                 if request.status_code < 400:
-                    print(request.json())
-                    # TODO: Save data to the database
+                    for item in request.json():
+                        # Convert item to pydantic model
+                        resource = MCPTablueItem.model_validate(item)
+
+                        # Check if there is already such a resource
+                        db_resource = get_resource_by_uid(db, resource.resource.id)
+
+                        if db_resource is None:
+                            # Create a new resource
+                            create_resource(db, resource)
+                        else:
+                            update_resource(db, resource)
 
     else:
         print("Skipping MPC query due to missing configuration")

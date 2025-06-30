@@ -32,11 +32,14 @@ class Operation(Base):
     selected = Column(Boolean, default=False)
 
 
-class Team(Base):
+class Resource(Base):
     # MCP class
-    __tablename__ = 'tableuItems'
+    __tablename__ = 'resources'
 
     id = Column(Integer, primary_key=True)
+
+    # UUID of the resource
+    uid = Column(String)
 
     name = Column(String)
     type = Column(String)
