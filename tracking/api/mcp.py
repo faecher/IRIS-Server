@@ -61,14 +61,18 @@ async def start_mcp(mcp_config: MCPConfig):
         mcp_config.url = mcp_config.url[:-1]
 
     # Try connection to the MCP server
-    request = requests.get(f"{mcp_config.url}/api/version", verify=False, timeout=5)
+    try:
+        request = requests.get(f"{mcp_config.url}/api/version", verify=False, timeout=5)
 
-    if request.status_code < 400:
-        # Set the API details
-        os.environ['MCP_URL'] = mcp_config.url
-        os.environ['MCP_API_KEY'] = mcp_config.api_key
-        os.environ['MCP_ENABLED'] = "true"
-    else:
+        if request.status_code < 400:
+            # Set the API details
+            os.environ['MCP_URL'] = mcp_config.url
+            os.environ['MCP_API_KEY'] = mcp_config.api_key
+            os.environ['MCP_ENABLED'] = "true"
+        else:
+            raise HTTPException(status_code=400, detail="MCP server not running")
+
+    except requests.exceptions.RequestException:
         raise HTTPException(status_code=400, detail="MCP server not running")
 
     return {"status": 200}
