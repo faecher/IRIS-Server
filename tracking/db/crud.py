@@ -102,7 +102,7 @@ def create_resource(db: Session, model: MCPTablueItem) -> Resource:
 
 
 def update_resource(db: Session, model: MCPTablueItem):
-    resource = get_resource_by_uid(db, model.resource.uid)
+    resource = get_resource_by_uid(db, model.resource.id)
     if resource is None:
         return None
 
