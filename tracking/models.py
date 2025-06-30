@@ -64,6 +64,17 @@ class ChirpstackUpEventModel(ChirpstackBaseEventModel):
     object: ChirpstackPayloadObject
 
 
+class Resource(BaseModel):
+    id: int
+    uid: str
+    name: str
+    type: str
+    status: int
+
+    class Config:
+        from_attributes = True
+
+
 class TrackerModel(BaseModel):
     id: int
     deviceEUI: str
@@ -72,6 +83,7 @@ class TrackerModel(BaseModel):
     long: float
     lat: float
     lastUpdated: int
+    resource: Union[Resource, None]
 
     class Config:
         from_attributes = True

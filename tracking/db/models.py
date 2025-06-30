@@ -1,6 +1,8 @@
 from datetime import datetime
+from typing import Optional
 
-from sqlalchemy import Integer, String, Float, Boolean
+from sqlalchemy import Integer, String, Float, Boolean, ForeignKey
+from sqlalchemy.orm import relationship, mapped_column, Mapped
 
 from tracking.db import Base, Column
 
@@ -16,6 +18,10 @@ class Tracker(Base):
     lat = Column(Float, default=0.0)
     # Use unix timestamp for last updated
     lastUpdated = Column(Integer, default=int(datetime.now().timestamp()))
+
+    # Database relationship
+    resourceId: Mapped[Optional[int]] = mapped_column(ForeignKey("resources.id"))
+    resource: Mapped[Optional["Resource"]] = relationship(back_populates="tracker")
 
 
 class Operation(Base):
@@ -44,3 +50,6 @@ class Resource(Base):
     name = Column(String)
     type = Column(String)
     status = Column(Integer)
+
+    # Database relationship
+    tracker: Mapped["Tracker"] = relationship(back_populates="resource")

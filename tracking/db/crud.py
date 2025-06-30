@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Union
+from typing import Union, List
 
 from sqlalchemy.orm import Session
 
@@ -14,6 +14,10 @@ def get_tracker_by_id(db: Session, instance_id: int):
 
 def get_tracker_by_eui(db: Session, eui: str):
     return db.query(Tracker).filter(Tracker.deviceEUI == eui).first()
+
+
+def get_trackers(db: Session) -> List[Tracker]:
+    return db.query(Tracker).all()
 
 
 def create_tracker(db: Session, model: ChirpstackUpEventModel):

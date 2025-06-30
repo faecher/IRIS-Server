@@ -5,6 +5,7 @@ from tracking.db.crud import get_resource_by_uid, create_resource, update_resour
 from tracking.db.models import Operation
 from tracking.dependencies import get_db
 from tracking.models import MCPTablueItem
+from tracking.socket import request_tracker_data
 
 
 async def get_mcp_data():
@@ -59,6 +60,9 @@ async def get_mcp_data():
                             create_resource(db, resource)
                         else:
                             update_resource(db, resource)
+
+                    # Emit data update
+                    await request_tracker_data(sid=None, data=None)
 
     else:
         print("Skipping MPC query due to missing configuration")
