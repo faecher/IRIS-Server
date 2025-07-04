@@ -90,6 +90,10 @@ def get_resource_by_uid(db: Session, uid: str) -> Union[None, Resource]:
     return db.query(Resource).filter(Resource.uid == uid).one_or_none()
 
 
+def get_resources(db: Session) -> List[Resource]:
+    return db.query(Resource).all()
+
+
 def create_resource(db: Session, model: MCPTablueItem) -> Resource:
 
     resource = Resource(
