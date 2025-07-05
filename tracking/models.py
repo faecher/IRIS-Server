@@ -89,6 +89,10 @@ class TrackerModel(BaseModel):
         from_attributes = True
 
 
+class TrackerUpdateModel(BaseModel):
+    resource: Union[int, None]
+
+
 class MCPConfig(BaseModel):
     url: str
     api_key: str

@@ -5,15 +5,15 @@ from sqlalchemy.orm import Session
 
 from tracking.db.models import Tracker, Operation, Resource
 from tracking.models import ChirpstackUpEventModel, ChirpstackPayloadBatteryMessage, ChirpstackPayloadLongitudeMessage, \
-    ChirpstackPayloadLatitudeMessage, MCPTablueItem
+    ChirpstackPayloadLatitudeMessage, MCPTablueItem, TrackerUpdateModel
 
 
-def get_tracker_by_id(db: Session, instance_id: int):
-    return db.query(Tracker).filter(Tracker.id == instance_id).first()
+def get_tracker_by_id(db: Session, instance_id: int) -> Union[None, Tracker]:
+    return db.query(Tracker).filter(Tracker.id == instance_id).one_or_none()
 
 
-def get_tracker_by_eui(db: Session, eui: str):
-    return db.query(Tracker).filter(Tracker.deviceEUI == eui).first()
+def get_tracker_by_eui(db: Session, eui: str) -> Union[None, Tracker]:
+    return db.query(Tracker).filter(Tracker.deviceEUI == eui).one_or_none()
 
 
 def get_trackers(db: Session) -> List[Tracker]:
@@ -78,12 +78,41 @@ def update_tracker(db: Session, model: ChirpstackUpEventModel):
     return tracker
 
 
+def update_tracker_resource(db: Session, instance_id: int, model: TrackerUpdateModel):
+    tracker = get_tracker_by_id(db, instance_id)
+
+    if tracker is None:
+        return None
+
+    if model.resource is None:
+        tracker.resourceId = None
+    else:
+        resource = get_resource_by_id(db, model.resource)
+        if resource is None:
+            return None
+
+        # Ensure each assignment is unique
+        trackers = db.query(Tracker).filter(Tracker.resourceId == model.resource).all()
+
+        if len(trackers) > 0:
+            # Raise an error if the resourceId is already in use with another tracker
+            return None
+
+        # Update the value
+        tracker.resourceId = model.resource
+
+    db.commit()
+    db.refresh(tracker)
+
+    return tracker
+
+
 def get_operation_by_uid(db: Session, uid: str) -> Union[None, Operation]:
     return db.query(Operation).filter(Operation.uid == uid).one_or_none()
 
 
-def get_resource_by_id(db: Session, id: str) -> Union[None, Resource]:
-    return db.query(Resource).filter(Resource.id == id).one_or_none()
+def get_resource_by_id(db: Session, instance_id: int) -> Union[None, Resource]:
+    return db.query(Resource).filter(Resource.id == instance_id).one_or_none()
 
 
 def get_resource_by_uid(db: Session, uid: str) -> Union[None, Resource]:
@@ -109,7 +138,7 @@ def create_resource(db: Session, model: MCPTablueItem) -> Resource:
     return resource
 
 
-def update_resource(db: Session, model: MCPTablueItem):
+def update_resource(db: Session, model: MCPTablueItem) -> Union[None, Resource]:
     resource = get_resource_by_uid(db, model.resource.id)
     if resource is None:
         return None
