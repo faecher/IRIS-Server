@@ -6,10 +6,13 @@ from sqlalchemy.ext.declarative import declarative_base
 from functools import partial
 
 
-# Define the default database url to be a local database file
-DEFAULT_SQLALCHEMY_DATABASE_URL = "sqlite:///./database.db"
-# Load the database uri from env
-SQLALCHEMY_DATABASE_URL = os.getenv("TRACKING_DATABASE_URI", DEFAULT_SQLALCHEMY_DATABASE_URL)
+from tracking import Settings
+
+
+settings = Settings()
+
+# Load the database uri from settings
+SQLALCHEMY_DATABASE_URL = settings.sqlalchemy_database_url
 
 CONNECTION_ARGS = {}
 # Add additional options for sqlite databases

@@ -10,4 +10,7 @@ class Settings(BaseSettings):
     mcp_api_key: Optional[str] = Field(default=None)
     # Update interval in seconds
     mcp_update_interval: int = Field(default=60, ge=5)
+
+    # Database settings
+    sqlalchemy_database_url: str = Field(default="sqlite:///./database.db")
     
