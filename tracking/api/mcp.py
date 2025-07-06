@@ -86,8 +86,8 @@ async def get_config(db: Session = Depends(get_db)):
 
     result = {
         "enabled": settings.mcp_enabled,
-        "api_key": settings.mcp_api_key,
-        "url": settings.mcp_url,
+        "api_key": settings.mcp_api_key if settings.mcp_api_key is not None else "",
+        "url": settings.mcp_url if settings.mcp_url is not None else "",
         "operation_selected": operation is not None,
         "operation": operation.uid if operation is not None else ""
     }
