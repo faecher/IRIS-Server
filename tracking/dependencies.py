@@ -1,7 +1,7 @@
 from tracking.db import SessionLocal
 
 
-def get_db():
+async def get_db():
     database = SessionLocal()
     try:
         yield database
