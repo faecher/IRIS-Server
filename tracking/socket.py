@@ -1,6 +1,7 @@
 import asyncio
 
 import socketio
+from sqlalchemy import select
 
 from tracking.dependencies import get_db
 from tracking.db.models import Tracker
@@ -26,7 +27,7 @@ async def request_tracker_data(sid, data):
     # Get the database
     db = next(get_db())
 
-    trackers = db.query(Tracker).all()
+    trackers = db.execute(select(Tracker)).all()
     # Convert all sqlalchemy objects to pydantic models for serialization
     response = []
     for tracker in trackers:

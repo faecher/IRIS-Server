@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Union, List
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from tracking.db.models import Tracker, Operation, Resource
@@ -9,15 +10,15 @@ from tracking.models import ChirpstackUpEventModel, ChirpstackPayloadBatteryMess
 
 
 def get_tracker_by_id(db: Session, instance_id: int) -> Union[None, Tracker]:
-    return db.query(Tracker).filter(Tracker.id == instance_id).one_or_none()
+    return db.execute(select(Tracker).filter_by(id=instance_id)).one_or_none()
 
 
 def get_tracker_by_eui(db: Session, eui: str) -> Union[None, Tracker]:
-    return db.query(Tracker).filter(Tracker.deviceEUI == eui).one_or_none()
+    return db.execute(select(Tracker).filter_by(deviceEUI=eui)).one_or_none()
 
 
 def get_trackers(db: Session) -> List[Tracker]:
-    return db.query(Tracker).all()
+    return db.execute(select(Tracker)).scalars().all()
 
 
 def create_tracker(db: Session, model: ChirpstackUpEventModel):
@@ -92,7 +93,7 @@ def update_tracker_resource(db: Session, instance_id: int, model: TrackerUpdateM
             return None
 
         # Ensure each assignment is unique
-        trackers = db.query(Tracker).filter(Tracker.resourceId == model.resource).all()
+        trackers = db.execute(select(Tracker).filter_by(resourceId=model.resource)).all()
 
         if len(trackers) > 0:
             # Raise an error if the resourceId is already in use with another tracker
@@ -108,19 +109,19 @@ def update_tracker_resource(db: Session, instance_id: int, model: TrackerUpdateM
 
 
 def get_operation_by_uid(db: Session, uid: str) -> Union[None, Operation]:
-    return db.query(Operation).filter(Operation.uid == uid).one_or_none()
+    return db.execute(select(Operation).filter_by(uid=uid)).one_or_none()
 
 
 def get_resource_by_id(db: Session, instance_id: int) -> Union[None, Resource]:
-    return db.query(Resource).filter(Resource.id == instance_id).one_or_none()
+    return db.execute(select(Resource).filter_by(id=instance_id)).one_or_none()
 
 
 def get_resource_by_uid(db: Session, uid: str) -> Union[None, Resource]:
-    return db.query(Resource).filter(Resource.uid == uid).one_or_none()
+    return db.execute(select(Resource).filter_by(uid=uid)).one_or_none()
 
 
 def get_resources(db: Session) -> List[Resource]:
-    return db.query(Resource).all()
+    return db.execute(select(Resource)).scalars().all()
 
 
 def create_resource(db: Session, model: MCPTablueItem) -> Resource:

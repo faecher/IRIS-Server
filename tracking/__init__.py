@@ -11,9 +11,6 @@ from tracking.utils.scheduling import repeat_every
 
 __version__ = "1.0.0"
 
-# Create all models from
-models.Base.metadata.create_all(bind=engine)
-
 # Create a settings instance
 settings = Settings()
 
@@ -41,6 +38,13 @@ app.include_router(api_router)
 @app.get("/")
 async def root():
     return {"message": "Hello World"}
+
+
+# Create all database models
+@app.on_event("startup")
+async def create_tables():
+    async with engine.begin() as conn:
+        await conn.run_sync(models.Base.metadata.create_all)
 
 
 @app.on_event("startup")

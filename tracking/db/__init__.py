@@ -1,5 +1,3 @@
-import os
-
 from sqlalchemy import Column as Col
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
