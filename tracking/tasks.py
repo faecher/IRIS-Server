@@ -1,3 +1,4 @@
+from sqlalchemy import select
 import requests
 
 from tracking import Settings
@@ -5,21 +6,20 @@ from tracking.db.crud import get_resource_by_uid, create_resource, update_resour
 from tracking.db.models import Operation
 from tracking.dependencies import get_db
 from tracking.models import MCPTablueItem
-from tracking.socket import request_tracker_data
 
 
 async def get_mcp_data():
     settings = Settings()
 
     # Get the database
-    db = next(get_db())
+    db = await anext(get_db())
 
     if settings.mcp_enabled is True and settings.mcp_url is not None and settings.mcp_api_key is not None:
         print("Getting MCP data")
 
         # Check if there are any operations stored in the database
         # This should only be executed once on start
-        operations = db.query(Operation).all()
+        operations = db.execute(select(Operation)).all()
 
         if len(operations) == 0:
             request = requests.get(f"{settings.mcp_url}/api/operations", headers={"Api-Key": settings.mcp_api_key, "accept": "*/*"},
@@ -40,7 +40,7 @@ async def get_mcp_data():
                     db.commit()
         else:
             # Get the selected operation
-            operation = db.query(Operation).filter(Operation.active == True).filter(Operation.selected == True).one_or_none()
+            operation = db.execute(select(Operation).filter_by(active=True).filter_by(selected=True)).one_or_none()
 
             if operation is not None:
                 request = requests.get(f"{settings.mcp_url}/api/tableau/resources",
@@ -60,9 +60,6 @@ async def get_mcp_data():
                             create_resource(db, resource)
                         else:
                             update_resource(db, resource)
-
-                    # Emit data update
-                    await request_tracker_data(sid=None, data=None)
 
     else:
         print("Skipping MPC query due to missing configuration")
