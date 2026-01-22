@@ -6,9 +6,10 @@
 
 # Welcome to the IRIS-Server Documentation
 
-> [!CAUTION] This is only the technical documentation about the IRIS-Server.
+> [!IMPORTANT]
+> This is only the technical documentation about the IRIS-Server.
 > 
-> For detailed installation and usage documentation see [IRIS-Frontend](https://github.com/faecher/IRIS-Frontend).
+> If you are looking for detailed installation- and usage documentation, see [IRIS-Frontend](https://github.com/faecher/IRIS-Frontend).
 
 
 ## Table of Contents
