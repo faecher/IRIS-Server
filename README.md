@@ -2,13 +2,24 @@
   <img src="./media/logos/IRIS Wide.svg">
 </div>
 
-The **I**nformation **R**elay & **I**ntegration **S**ystem (IRIS) collects GPS Tracking data of multiple trackers to display on a map or in [Mission Control Paramedic (MCP)](https://www.mission-control-paramedic.de/).
+<br> 
 
-The [IRIS-Server](https://github.com/faecher/IRIS-Server) provides and relays the data, whereas [IRIS-Frontend](https://github.com/faecher/IRIS-Frontend) offers the Possibility to configure the server and view current locations.
+The **I**nformation **R**elay & **I**ntegration **S**ystem (IRIS) collects GPS tracking data of multiple trackers to display on a map or in [Mission Control Paramedic (MCP)](https://www.mission-control-paramedic.de/). Just like the equally named Greek messenger goddess, IRIS helps you move data between systems and stay on top of what counts - your teams and saving the world!
+
+The [IRIS-Server](https://github.com/faecher/IRIS-Server) provides and relays the data, whereas [IRIS-Frontend](https://github.com/faecher/IRIS-Frontend) offers the possibility to configure the server and view current locations.
 
 ## Features
-TODO
+- Readout of LoRaWAN GPS trackers
+- Assign trackers to teams
+- Battery overview of all connected trackers
+- Monitor your team location in real-time
 
-## Setup
+#### Coming Soon<sup>TM</sup>
+- Data relay to MCP
+- Readout of TETRA Digitalfunk GPS data 
 
-See [IRIS-Frontend](https://github.com/faecher/IRIS-Frontend) for detailed setup instructions.
+## Setup & Full Documentation
+
+See [IRIS-Frontend](https://github.com/faecher/IRIS-Frontend) for detailed installation and usage documentation.
+
+In this repository, there will only be technical documentation about the backend to aid in development and expansion. The technical documentation can be found [here](./docs/wiki/README.md).
