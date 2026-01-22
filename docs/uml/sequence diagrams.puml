@@ -1,0 +1,321 @@
+@startuml Sequence: Tracker Data Upload
+!theme crt-green
+
+' ========================================
+' Sequence 1: Chirpstack Gateway Data Upload
+' ========================================
+participant "Chirpstack\nGateway" as Gateway
+participant "gateway_router\n/api/gateway/data" as GatewayRouter
+participant "dependencies\nget_db()" as GetDB
+participant "crud" as CRUD
+participant "Database\n(SQLAlchemy)" as DB
+
+Gateway -> GatewayRouter: POST /api/gateway/data\nevent="up"\ndata=ChirpstackUpEventModel
+activate GatewayRouter
+
+GatewayRouter -> GetDB: Request db session
+activate GetDB
+GetDB -> DB: SessionLocal()
+activate DB
+GetDB --> GatewayRouter: yield db session
+deactivate GetDB
+
+GatewayRouter -> CRUD: get_tracker_by_eui(db, devEui)
+activate CRUD
+CRUD -> DB: SELECT Tracker WHERE deviceEUI=devEui
+DB --> CRUD: Tracker or None
+deactivate CRUD
+
+alt Tracker not found
+    GatewayRouter -> CRUD: create_tracker(db, data)
+    activate CRUD
+    CRUD -> DB: INSERT Tracker
+    DB --> CRUD: New Tracker
+    CRUD --> GatewayRouter: Tracker
+    deactivate CRUD
+else Tracker exists
+    GatewayRouter -> CRUD: update_tracker(db, data)
+    activate CRUD
+    CRUD -> DB: UPDATE Tracker\n(battery, lat, long, lastUpdated)
+    DB --> CRUD: Updated Tracker
+    CRUD --> GatewayRouter: Tracker
+    deactivate CRUD
+end
+
+GatewayRouter --> Gateway: {"status": "success"}
+deactivate GatewayRouter
+
+GetDB -> DB: close session
+deactivate DB
+
+@enduml
+
+
+@startuml Sequence: Fetch Tracker-List
+!theme crt-green
+
+' ========================================
+' Sequence 2: Frontend Fetches Tracker List
+' ========================================
+participant "Frontend\nClient" as Frontend
+participant "tracker_router\n/api/tracker/" as TrackerRouter
+participant "dependencies\nget_db()" as GetDB2
+participant "crud" as CRUD2
+participant "Database" as DB2
+
+Frontend -> TrackerRouter: GET /api/tracker/
+activate TrackerRouter
+
+TrackerRouter -> GetDB2: Request db session
+activate GetDB2
+GetDB2 -> DB2: SessionLocal()
+activate DB2
+GetDB2 --> TrackerRouter: yield db session
+deactivate GetDB2
+
+TrackerRouter -> CRUD2: get_trackers(db)
+activate CRUD2
+CRUD2 -> DB2: SELECT all Trackers\n(with joined Resources)
+DB2 --> CRUD2: List[Tracker]
+deactivate CRUD2
+
+TrackerRouter --> Frontend: List[TrackerModel]\n(JSON response)
+deactivate TrackerRouter
+
+GetDB2 -> DB2: close session
+deactivate DB2
+
+@enduml
+
+
+@startuml Sequence: Assign Resource to Tracker
+!theme crt-green
+
+' ========================================
+' Sequence 3: Assign Resource to Tracker
+' ========================================
+participant "Frontend" as FE
+participant "tracker_router\n/api/tracker/{id}" as TR
+participant "dependencies\nget_db()" as GetDB3
+participant "crud" as CRUD3
+participant "Database" as DB3
+
+FE -> TR: POST /api/tracker/123\nTrackerUpdateModel{resource: 5}
+activate TR
+
+TR -> GetDB3: Request db session
+activate GetDB3
+GetDB3 -> DB3: SessionLocal()
+activate DB3
+GetDB3 --> TR: yield db session
+deactivate GetDB3
+
+TR -> CRUD3: get_tracker_by_id(db, 123)
+activate CRUD3
+CRUD3 -> DB3: SELECT Tracker WHERE id=123
+DB3 --> CRUD3: Tracker or None
+deactivate CRUD3
+
+alt Tracker not found
+    TR --> FE: 404 Not Found
+else Tracker found
+    TR -> CRUD3: update_tracker_resource(db, 123, model)
+    activate CRUD3
+    
+    CRUD3 -> CRUD3: get_resource_by_id(db, 5)
+    CRUD3 -> DB3: SELECT Resource WHERE id=5
+    DB3 --> CRUD3: Resource or None
+    
+    alt Resource not found
+        CRUD3 --> TR: None
+        TR --> FE: Error response
+    else Resource found
+        CRUD3 -> DB3: Check if Resource already assigned
+        DB3 --> CRUD3: List of Trackers with resourceId=5
+        
+        alt Resource already assigned
+            CRUD3 --> TR: None
+            TR --> FE: Error: Resource in use
+        else Resource available
+            CRUD3 -> DB3: UPDATE Tracker SET resourceId=5
+            DB3 --> CRUD3: Updated Tracker
+            CRUD3 --> TR: Tracker
+            deactivate CRUD3
+            TR --> FE: TrackerModel (JSON)
+        end
+    end
+end
+
+deactivate TR
+GetDB3 -> DB3: close session
+deactivate DB3
+
+@enduml
+
+
+@startuml Sequence: MCP Integration (Scheduled Task)
+!theme crt-green
+
+' ========================================
+' Sequence 4: MCP Integration - Background Task
+' ========================================
+participant "FastAPI\nScheduler" as Scheduler
+participant "tasks\nget_mcp_data()" as Tasks
+participant "dependencies\nget_db()" as GetDB4
+participant "Settings" as Settings
+participant "MCP Server\n(External API)" as MCP
+participant "crud" as CRUD4
+participant "Database" as DB4
+
+Scheduler -> Tasks: Every mcp_update_interval seconds
+activate Tasks
+
+Tasks -> Settings: Load configuration
+activate Settings
+Settings --> Tasks: mcp_enabled, mcp_url, mcp_api_key
+deactivate Settings
+
+alt MCP not enabled or not configured
+    Tasks --> Scheduler: Skip (print message)
+else MCP enabled
+    Tasks -> GetDB4: anext(get_db())
+    activate GetDB4
+    GetDB4 -> DB4: SessionLocal()
+    activate DB4
+    GetDB4 --> Tasks: db session
+    deactivate GetDB4
+    
+    Tasks -> DB4: SELECT Operations
+    DB4 --> Tasks: List of Operations
+    
+    alt No operations in database (first run)
+        Tasks -> MCP: GET /api/operations
+        activate MCP
+        MCP --> Tasks: List of operations (JSON)
+        deactivate MCP
+        
+        loop For each operation
+            Tasks -> DB4: INSERT Operation
+        end
+        
+    else Operations exist
+        Tasks -> DB4: SELECT active & selected Operation
+        DB4 --> Tasks: Operation or None
+        
+        alt Operation selected
+            Tasks -> MCP: GET /api/tableau/resources\nparams: operationId
+            activate MCP
+            MCP --> Tasks: List[MCPTablueItem]
+            deactivate MCP
+            
+            loop For each resource item
+                Tasks -> CRUD4: get_resource_by_uid(db, uid)
+                activate CRUD4
+                CRUD4 -> DB4: SELECT Resource WHERE uid=uid
+                DB4 --> CRUD4: Resource or None
+                deactivate CRUD4
+                
+                alt Resource not exists
+                    Tasks -> CRUD4: create_resource(db, item)
+                    activate CRUD4
+                    CRUD4 -> DB4: INSERT Resource
+                    DB4 --> CRUD4: New Resource
+                    deactivate CRUD4
+                else Resource exists
+                    Tasks -> CRUD4: update_resource(db, item)
+                    activate CRUD4
+                    CRUD4 -> DB4: UPDATE Resource
+                    DB4 --> CRUD4: Updated Resource
+                    deactivate CRUD4
+                end
+            end
+        end
+    end
+    
+    deactivate DB4
+end
+
+deactivate Tasks
+
+@enduml
+
+
+@startuml Sequence: Configure MCP Integration
+!theme crt-green
+
+' ========================================
+' Sequence 5: MCP Configuration
+' ========================================
+participant "Frontend" as FE2
+participant "mcp_router\n/api/mcp/start" as MCPR
+participant "MCP Server" as MCP2
+participant "Environment" as Env
+
+FE2 -> MCPR: POST /api/mcp/start\nMCPConfig{url, api_key}
+activate MCPR
+
+MCPR -> MCPR: Sanitize URL\n(add https://, remove trailing /)
+
+MCPR -> MCP2: GET /api/version\n(verify connection)
+activate MCP2
+
+alt MCP Server responds
+    MCP2 --> MCPR: 200 OK
+    deactivate MCP2
+    
+    MCPR -> Env: Set environment variables\nMCP_URL, MCP_API_KEY, MCP_ENABLED
+    Env --> MCPR: Variables set
+    
+    MCPR --> FE2: {"status": 200}
+else MCP Server error or timeout
+    MCP2 --> MCPR: Error / Timeout
+    deactivate MCP2
+    MCPR --> FE2: 400 Bad Request\n"MCP server not running"
+end
+
+deactivate MCPR
+
+@enduml
+
+
+@startuml Sequence: Enable MCP Operation
+!theme crt-green
+
+' ========================================
+' Sequence 6: Enable MCP Operation
+' ========================================
+participant "Frontend" as FE3
+participant "mcp_router\n/api/mcp/operations/enable" as MCPR2
+participant "dependencies\nget_db()" as GetDB5
+participant "crud" as CRUD5
+participant "Database" as DB5
+
+FE3 -> MCPR2: POST /api/mcp/operations/enable\nMCPOperationConfig{uid}
+activate MCPR2
+
+MCPR2 -> GetDB5: Request db session
+activate GetDB5
+GetDB5 -> DB5: SessionLocal()
+activate DB5
+GetDB5 --> MCPR2: yield db session
+deactivate GetDB5
+
+MCPR2 -> CRUD5: get_operation_by_uid(db, uid)
+activate CRUD5
+CRUD5 -> DB5: SELECT Operation WHERE uid=uid
+DB5 --> CRUD5: Operation or None
+deactivate CRUD5
+
+alt Operation not found
+    MCPR2 --> FE3: 404 Not Found
+else Operation found
+    MCPR2 -> DB5: UPDATE Operation SET selected=True
+    DB5 --> MCPR2: Updated Operation
+    MCPR2 --> FE3: {"status": 200}
+end
+
+deactivate MCPR2
+GetDB5 -> DB5: close session
+deactivate DB5
+
+@enduml

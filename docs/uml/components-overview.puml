@@ -1,0 +1,363 @@
+@startuml TrackingServer
+!theme crt-green
+skinparam linetype ortho
+skinparam nodesep 60
+skinparam ranksep 80
+
+' ===== Configuration & Settings =====
+package "Configuration" <<Frame>> {
+    class Settings {
+        +mcp_enabled: bool
+        +mcp_url: Optional[str]
+        +mcp_api_key: Optional[str]
+        +mcp_update_interval: int
+        +sqlalchemy_database_url: str
+    }
+}
+
+' ===== CRUD Operations =====
+package "Database CRUD" <<Rectangle>> {
+    class crud {
+        +get_tracker_by_id(db: Session, instance_id: int): Union[None, Tracker]
+        +get_tracker_by_eui(db: Session, eui: str): Union[None, Tracker]
+        +get_trackers(db: Session): List[Tracker]
+        +create_tracker(db: Session, model: ChirpstackUpEventModel): Tracker
+        +update_tracker(db: Session, model: ChirpstackUpEventModel): Tracker
+        +update_tracker_resource(db: Session, id: int, model: TrackerUpdateModel): Tracker
+        +get_operation_by_uid(db: Session, uid: str): Union[None, Operation]
+        +get_resource_by_id(db: Session, instance_id: int): Union[None, Resource]
+        +get_resource_by_uid(db: Session, uid: str): Union[None, Resource]
+        +get_resources(db: Session): List[Resource]
+        +create_resource(db: Session, model: MCPTablueItem): Resource
+        +update_resource(db: Session, model: MCPTablueItem): Union[None, Resource]
+    }
+}
+
+' ===== Tasks & Background Jobs =====
+package "Background Tasks" <<Node>> {
+    class tasks {
+        +get_mcp_data(): async
+    }
+
+    ' class scheduling {
+    '     +repeat_every(seconds, wait_first, logger, raise_exceptions, max_repetitions): decorator
+    ' }
+
+	note left of tasks
+	    Background task runs every
+	    mcp_update_interval seconds
+	    to sync resources from MCP server
+	end note
+}
+
+' ===== API Routers =====
+package "API Routers" <<Component>> {
+    class gateway_router <<APIRouter>> {
+        +POST /gateway/data
+        --
+        +up_event(event: str, data: Union[ChirpstackUpEventModel, ChirpstackBaseEventModel], db: Session)
+    }
+
+	note bottom of gateway_router
+	    Receives data from 
+	    Chirpstack LoRaWAN gateway
+	    HTTP integration
+	end note
+
+    class tracker_router <<APIRouter>> {
+        +GET /tracker/
+        +POST /tracker/{instance_id}
+        --
+        +get_tracker(db: Session): List[TrackerModel]
+        +update_tracker(instance_id: int, model: TrackerUpdateModel, db: Session)
+    }
+
+    class resource_router <<APIRouter>> {
+        +GET /resources/
+        --
+        +get_resource(db: Session): List[Resource]
+    }
+
+    class mcp_router <<APIRouter>> {
+        +GET /mcp/operations
+        +POST /mcp/operations/enable
+        +POST /mcp/operations/disable
+        +POST /mcp/start
+        +GET /mcp/config
+        --
+        +get_operations(db: Session): List[Operation]
+        +enable_operation(mcp_operation: MCPOperationConfig, db: Session)
+        +disable_operation(mcp_operation: MCPOperationConfig, db: Session)
+        +start_mcp(mcp_config: MCPConfig)
+        +get_config(db: Session)
+    }
+
+	note bottom of mcp_router
+	    Manages MCP (Mission Control Paramedic)
+	    operations and resource synchronization
+	end note
+
+    class system_router <<APIRouter>> {
+        +GET /system/status
+        +GET /system/version
+        --
+        +get_system_status(): dict
+        +get_system_version(): dict
+    }
+
+    class api_router <<APIRouter>> {
+        +prefix: "/api"
+    }
+}
+
+' ===== Dependencies =====
+package "Dependencies" <<Folder>> {
+    class dependencies {
+        +get_db(): async generator
+    }
+}
+
+' ===== Main Application =====
+package "Application" <<Frame>> {
+    class FastAPI_App {
+        +summary: str
+        +version: str
+        --
+        +root(): async
+        +schedule_lookup(): async
+        --
+        Includes: api_router
+    }
+
+    class db_module {
+        +engine: Engine
+        +SessionLocal: sessionmaker
+        +Base: declarative_base
+        +Column: partial
+    }
+}
+
+' ===== Relationships =====
+
+' API Routers to CRUD
+gateway_router ...> crud : uses
+tracker_router ...> crud : uses
+resource_router ...> crud : uses
+mcp_router ...> crud : uses
+
+' API Routers to Dependencies
+' api_router .> dependencies : depends
+dependencies <... api_router : depends
+
+' CRUD to Database Models
+' crud ..> Tracker : manages
+' crud ..> Operation : manages
+' crud ..> Resource : manages
+
+' CRUD to API Models
+' crud ..> ChirpstackUpEventModel : uses
+' crud ..> MCPTablueItem : uses
+' crud ..> TrackerUpdateModel : uses
+
+' Tasks to CRUD
+tasks ......> crud : uses
+' tasks ..> Operation : queries
+' tasks ..> Resource : manages
+
+' Tasks to Settings
+' tasks .> Settings : uses
+
+' Main App to Routers
+api_router <|.. gateway_router
+api_router <|.. tracker_router
+api_router <|.. resource_router
+api_router <|.. mcp_router
+api_router <|.. system_router
+FastAPI_App *---- api_router : includes
+
+' Main App to Database
+FastAPI_App ..> db_module : uses
+db_module ..> Settings : uses
+
+' Main App to Tasks
+FastAPI_App ..> tasks : schedules
+' FastAPI_App ..> scheduling : uses
+
+' Dependencies to Database
+dependencies .> db_module : uses
+
+note top of FastAPI_App
+    Main application entry point
+    - Initializes database
+    - Registers API routes
+    - Schedules background tasks
+    - CORS middleware (commented)
+end note
+
+
+@enduml
+
+' MARK: DB Models
+@startuml Database Models
+!theme crt-green
+
+' ===== Database Models =====
+package "Database Models" <<Database>> {
+    class Tracker {
+        +id: int
+        +deviceEUI: str
+        +name: str
+        +battery: float
+        +long: float
+        +lat: float
+        +lastUpdated: int
+        +resourceId: Optional[int]
+        +resource: Optional[Resource]
+    }
+
+	note left of Tracker
+	    Represents LoRaWAN GPS tracker
+	    with battery and location data
+	end note
+
+    class Operation {
+        +id: int
+        +uid: str
+        +title: str
+        +active: bool
+        +archived: bool
+        +selected: bool
+    }
+
+    class Resource {
+        +id: int
+        +uid: str
+        +name: str
+        +type: str
+        +status: int
+        +tracker: Tracker
+    }
+
+    Tracker "0..1" -- "0..1" Resource : resourceId >
+}
+
+@enduml
+
+
+@startuml API Models
+!theme crt-green
+
+' ===== Pydantic Models (API DTOs) =====
+package "API Models" <<Cloud>> {
+    class DeviceInfo {
+        +tenantId: str
+        +tenantName: str
+        +applicationId: str
+        +applicationName: str
+        +deviceProfileId: str
+        +deviceProfileName: str
+        +deviceName: str
+        +devEui: str
+    }
+
+    class ChirpstackPayloadMessage {
+        +type: str
+        +timestamp: float
+        +measurementId: str
+    }
+
+    class ChirpstackPayloadBatteryMessage {
+        +type: str
+        +timestamp: float
+        +measurementId: str
+        +measurementValue: float
+    }
+
+    class ChirpstackPayloadLatitudeMessage {
+        +type: str
+        +timestamp: float
+        +measurementId: str
+        +measurementValue: float
+    }
+
+    class ChirpstackPayloadLongitudeMessage {
+        +type: str
+        +timestamp: float
+        +measurementId: str
+        +measurementValue: float
+    }
+
+    class ChirpstackPayloadObject {
+        +valid: bool
+        +payload: str
+        +err: float
+        +messages: list[list[Union[...]]]
+    }
+
+    class ChirpstackBaseEventModel {
+        +time: datetime
+        +deviceInfo: DeviceInfo
+    }
+
+    class ChirpstackUpEventModel {
+        +deduplicationId: str
+        +devAddr: str
+        +object: ChirpstackPayloadObject
+    }
+
+    class TrackerModel {
+        +id: int
+        +deviceEUI: str
+        +name: str
+        +battery: float
+        +long: float
+        +lat: float
+        +lastUpdated: int
+        +resource: Union[Resource, None]
+    }
+
+    class TrackerUpdateModel {
+        +resource: Union[int, None]
+    }
+
+    class MCPConfig {
+        +url: str
+        +api_key: str
+    }
+
+    class MCPOperationConfig {
+        +uid: str
+    }
+
+    class MCPResource {
+        +name: str
+        +type: str
+        +id: str
+    }
+
+    class MCPTablueItem {
+        +id: str
+        +operationId: str
+        +resource: MCPResource
+        +status: int
+    }
+
+    ChirpstackBaseEventModel <|-- ChirpstackUpEventModel
+    ChirpstackBaseEventModel *-- DeviceInfo
+    ChirpstackUpEventModel *-- ChirpstackPayloadObject
+    ChirpstackPayloadObject *-- ChirpstackPayloadMessage
+    ChirpstackPayloadMessage <|-- ChirpstackPayloadBatteryMessage
+    ChirpstackPayloadMessage <|-- ChirpstackPayloadLatitudeMessage
+    ChirpstackPayloadMessage <|-- ChirpstackPayloadLongitudeMessage
+    MCPTablueItem *-- MCPResource
+}
+
+@enduml
+
+
+
+
+
+
+
+
