@@ -5,11 +5,28 @@ on:
     branches: [main]
 
 jobs:
-  build-backend:
+  build-server:
+    name: Build and Push IRIS Server Docker Image
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+
     steps:
-      - uses: actions/checkout@v3
-      - name: Build and push backend
-        run: |
-          docker build -t ghcr.io/faecher/iris-server:latest .
-          docker push ghcr.io/faecher/iris-server:latest
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+        
+    - uses: actions/checkout@v3
+
+    - name: Build and push server
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: |
+          ghcr.io/faecher/iris-server:latest
+          ghcr.io/faecher/iris-server:${{ github.sha }}
