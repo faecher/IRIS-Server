@@ -1,0 +1,57 @@
+package config
+
+import (
+	"fmt"
+
+	"github.com/caarlos0/env/v10"
+)
+
+// MCPConfig holds the configuration for MCP integration
+type MCPConfig struct {
+	ServerURL    string `env:"MCP_SERVER_URL"`
+	APIToken     string `env:"MCP_API_TOKEN"`
+	OperationUID string `env:"MCP_OPERATION_UID"`
+}
+
+// SQLConfig holds the database configuration
+type SQLConfig struct {
+	Host     string `env:"DB_HOST" envDefault:"localhost"`
+	Port     uint16 `env:"DB_PORT" envDefault:"5432"`
+	User     string `env:"DB_USER" envDefault:"postgres"`
+	Password string `env:"DB_PASSWORD"`
+	DBName   string `env:"DB_NAME" envDefault:"iris"`
+	SSLMode  string `env:"DB_SSLMODE" envDefault:"disable"`
+}
+
+// WebServerConfig holds the web server configuration
+type WebServerConfig struct {
+	Address string `env:"SERVER_ADDRESS" envDefault:"0.0.0.0:8080"`
+}
+
+// SentryConfig holds the configuration for Sentry error tracking
+// type SentryConfig struct {
+// 	DSN         string `env:"SENTRY_DSN"`
+// 	Environment string `env:"SENTRY_ENVIRONMENT" envDefault:"production"`
+// }
+
+// Config is the main configuration struct
+type Config struct {
+	MCP    MCPConfig
+	SQL    SQLConfig
+	Server WebServerConfig
+	// Sentry SentryConfig
+}
+
+// Load reads environment variables and populates the Config struct
+func Load() (*Config, error) {
+	cfg := &Config{}
+	if err := env.Parse(cfg); err != nil {
+		return nil, fmt.Errorf("failed to parse environment variables: %w", err)
+	}
+	return cfg, nil
+}
+
+func (c *SQLConfig) ConnectionString() string {
+	return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
+		c.Host, c.Port, c.User, c.Password, c.DBName, c.SSLMode)
+}

@@ -1,0 +1,76 @@
+@startuml Models
+
+!theme crt-green
+
+package internal {
+package models {
+	interface Tracker {
+		GetPosition() Position
+		GetLastUpdate() DateTime
+		GetBattery() uint16
+	}
+
+	struct Position {
+		+ Long: double
+		+ Lat: double
+	}
+
+	struct BaseTracker {
+		+ Position
+		+ ID: UUID
+		+ Name: string
+		+ Battery: uint16
+		+ LastUpdate: DateTime
+	}
+
+	Tracker <|.. BaseTracker : implements
+
+	struct ChirpstackTracker {
+		BaseTracker
+		+ DevEUI: string
+	}
+	
+
+	struct TetraTracker {
+		BaseTracker
+		+ ISSI: string
+	}
+	note bottom of TetraTracker 
+	TETRA support planned for future,
+	Not yet implemented.
+	end note
+
+	BaseTracker <|.. ChirpstackTracker : extends
+	BaseTracker <|.. TetraTracker : extends
+
+
+	struct Resource {
+		+ ID: UUID
+		+ Name: string
+		+ Type: string
+		+ Status: uint16
+	}
+
+	BaseTracker "*" - "1" Resource : belongs to
+}
+
+package config {
+	struct MCPConfig {
+		+ ServerURL: string
+		+ APIToken: string
+		+ OperationUID: string
+	}
+
+	struct SQLConfig {
+		+ Host: string
+		+ Port: uint16
+		+ User: string
+		+ Password: string
+		+ DBName: string
+	}
+}
+}
+
+
+@enduml
+
