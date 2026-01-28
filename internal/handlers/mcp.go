@@ -5,56 +5,111 @@ import (
 	"IRIS-Server/internal/models"
 	"IRIS-Server/internal/repository"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gofrs/uuid/v5"
 )
-
-// !!!!! TODO: do we need the rest of this functionality? we just want to move the pins in mcp?
 
 func MCPHandler(router *gin.Engine) {
 	mcpGroup := router.Group("/mcp")
 
 	mcpGroup.GET("/operations", getMCPOperations)
-	mcpGroup.POST("/operations/enable", enableMCPOperation)
-	mcpGroup.POST("/operations/disable", disableMCPOperation)
+	mcpGroup.POST("/operations/set/:id", setMCPOperation)
+
+	mcpGroup.GET("/siteplans", getMCPSiteplans)
+	mcpGroup.POST("/siteplans/set/:id", setMCPSiteplan)
+
 	mcpGroup.POST("/start", startMCPIntegration)
 	mcpGroup.GET("/config", getMCPConfig)
+
 }
 
 // getMCPOperations returns all active MCP operations
 // GET /mcp/operations
 func getMCPOperations(c *gin.Context) {
-	// TODO: Query operations table filtered by active=true
-	// TODO: Return JSON array of Operation models with 200 status
+	operations, err := mcp_control.GetMCPOperations()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch MCP operations: " + err.Error()})
+		return
+	}
 
-	c.Status(http.StatusNotImplemented)
+	c.JSON(http.StatusOK, operations)
 }
 
 // enableMCPOperation marks an operation as selected
-// POST /mcp/operations/enable
-func enableMCPOperation(c *gin.Context) {
-	// TODO: Parse MCPOperationConfig from request body (contains uid)
-	// TODO: Find operation by uid in database
-	// TODO: If operation not found, return 404 error
-	// TODO: Set operation.selected = true
-	// TODO: Commit changes to database
-	// TODO: Return {"status": 200}
+// POST /mcp/operations/set/:id
+func setMCPOperation(c *gin.Context) {
+	operationID, err := uuid.FromString(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid operation ID"})
+		return
+	}
 
-	c.Status(http.StatusNotImplemented)
+	// Check if operation exists in MCP
+	allOperations, err := mcp_control.GetMCPOperations()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch MCP operations: " + err.Error()})
+		return
+	}
+
+	if !slices.ContainsFunc(allOperations, func(operation models.MCPOperation) bool {
+		return operation.ID == operationID
+	}) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Operation ID not found in mcp"})
+		return
+	}
+
+	// Save selected operation in database
+	err = repository.UpdateMCPOperation(operationID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save MCP operation: " + err.Error()})
+		return
+	}
+
+	c.Status(http.StatusOK)
 }
 
-// disableMCPOperation marks an operation as not selected
-// POST /mcp/operations/disable
-func disableMCPOperation(c *gin.Context) {
-	// TODO: Parse MCPOperationConfig from request body (contains uid)
-	// TODO: Find operation by uid in database
-	// TODO: If operation not found, return 404 error
-	// TODO: Set operation.selected = false
-	// TODO: Commit changes to database
-	// TODO: Return {"status": 200}
+// getMCPSiteplans returns all MCP siteplans
+// GET /mcp/siteplans
+func getMCPSiteplans(c *gin.Context) {
+	siteplans, err := mcp_control.GetMCPSiteplans()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch MCP siteplans: " + err.Error()})
+		return
+	}
 
-	c.Status(http.StatusNotImplemented)
+	c.JSON(http.StatusOK, siteplans)
+}
+
+func setMCPSiteplan(c *gin.Context) {
+	siteplanID, err := uuid.FromString(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid siteplan ID"})
+		return
+	}
+	// Check if siteplan exists in MCP
+	allSiteplans, err := mcp_control.GetMCPSiteplans()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch MCP siteplans: " + err.Error()})
+		return
+	}
+	if !slices.ContainsFunc(allSiteplans, func(siteplan models.MCPSiteplan) bool {
+		return siteplan.ID == siteplanID
+	}) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Siteplan ID not found in mcp"})
+		return
+	}
+
+	// Save selected siteplan in database
+	err = repository.UpdateMCPSiteplan(siteplanID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save MCP siteplan: " + err.Error()})
+		return
+	}
+
+	c.Status(http.StatusOK)
 }
 
 // startMCPIntegration configures and enables MCP integration
@@ -103,9 +158,6 @@ func getMCPConfig(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch MCP config"})
 		return
 	}
-
-	// TODO: Query for active AND selected operation
-	// TODO: Build response object with: ..., operation_selected, operation (uid)
 
 	c.JSON(http.StatusOK, gin.H{
 		"enabled": config.Enabled,
