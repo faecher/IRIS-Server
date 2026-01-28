@@ -8,3 +8,21 @@ ein place kann viele siteplans haben, da brauchen wir auf jeden Fall einen Selec
 
 mit der siteplan-id kann man marker erstellen, aber achtung: entityType muss TEMPLATE und nicht SNAPSHOT sein!
 beim erstellen muss man zwar das id feld angeben für den marker,  bekommt dann aber eine komplett andere ID zurück für den kreierten Marker
+
+
+Desweiteren:
+Jeder marker ist nur auf seinem bestehenden siteplan existent.
+Gibt man eine andere Siteplan-ID an, wird diese ignoriert und es kommt die alte zurück, das Feld muss aber trotzdem mitgeschickt werden -.-
+
+Also brauchen wir ein Verzeichnis aller siteplanIDs, die ausgewählt wurden und dann erstellen wir darauf jeweils für alle ressourcen pins
+
+
+tldr:
+SQL:
+resource_marker tabelle statt marker_id in ressource
+mit resource_id, marker_id, siteplan_id
+
+-> aktive siteplan_id speichern und bei jedem pin move passend filtern
+
+
+Done
