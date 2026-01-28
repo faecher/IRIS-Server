@@ -85,6 +85,9 @@ CREATE TABLE mcp_config (
 	url text NOT NULL,
 	api_key text NOT NULL,
 
+	operation_id UUID,
+	siteplan_id UUID,
+
 	
 	-- System
 	created_at timestamp DEFAULT CURRENT_TIMESTAMP,
@@ -106,19 +109,15 @@ CREATE TABLE trackers_resource (
 	resource_id uuid REFERENCES resources(resource_id) ON DELETE CASCADE,
 
 	PRIMARY KEY (tracker_id, resource_id),
-    
-    -- System Fields
-    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
-    updated_at timestamp DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TRIGGER update_tracker_resources_updated_at 
-    BEFORE UPDATE ON tracker_resources 
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TABLE resource_marker (
+	resource_id uuid REFERENCES resources(resource_id) UNIQUE ON DELETE CASCADE,
+	marker_id uuid PRIMARY KEY,
+	siteplan_id uuid,
+);
 
-
-
-
+CREATE INDEX idx_resource_marker_siteplan ON resource_marker(siteplan_id);
 
 -- =============================================================================
 -- VERSIONING SCHEMA

@@ -21,16 +21,21 @@ func UpdateTrackerInMCP(trackerID uuid.UUID) error {
 		return err
 	}
 
+	marker, err := repository.GetResourceMarker(tracker.Resource.ID)
+	if err != nil {
+		return err
+	}
+
 	requestBody := map[string]any{
 		"name": tracker.Resource.Name,
 		"position": map[string]any{
 			"lat": tracker.Position.Latitude,
 			"lng": tracker.Position.Longitude,
 		},
-		"id":         tracker.Resource.MarkerID,
+		"id":         marker.MarkerID,
 		"icon":       "BASIC_PIN", // TODO: what icon to use here? read from resource type?
 		"entityType": "TEMPLATE",
-		"siteplanId": nil, // TODO: where tf do we get siteplanId from? do we really need to make a ui page to select this?
+		"siteplanId": marker.SiteplanID,
 	}
 
 	jsonData, err := json.Marshal(requestBody)
@@ -40,7 +45,7 @@ func UpdateTrackerInMCP(trackerID uuid.UUID) error {
 
 	body := io.NopCloser(bytes.NewReader(jsonData))
 
-	if tracker.Resource.MarkerID == nil {
+	if marker.MarkerID == uuid.Nil { // Create new marker
 		resp, err := mcpRequest("POST", "/api/markers", body)
 		if err != nil {
 			return err
@@ -76,7 +81,7 @@ func UpdateTrackerInMCP(trackerID uuid.UUID) error {
 		if err != nil {
 			return err
 		}
-	} else {
+	} else { // Update existing marker
 		resp, err := mcpRequest("PUT", "/api/markers", body)
 		if err != nil {
 			return err
