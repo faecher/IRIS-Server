@@ -1,8 +1,11 @@
 package repository
 
-import "IRIS-Server/internal/models"
+import (
+	"IRIS-Server/internal/models"
+	"context"
 
-// TODO: mention that this file should be edited for another tracker addition
+	"github.com/gofrs/uuid/v5"
+)
 
 // CreateChirpstackTracker creates a new Chirpstack tracker record in the database
 // it automatically takes the battery and position from the embedded BaseTracker.
@@ -34,7 +37,7 @@ func CreateChirpstackTracker(tracker *models.ChirpstackTracker) error {
 	return nil
 }
 
-func CreateTetraTracker(tracker models.TetraTracker) error {
+func CreateTetraTracker(tracker *models.TetraTracker) error {
 	// TODO
 	return nil
 }

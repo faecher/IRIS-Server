@@ -78,7 +78,6 @@ func GetTrackerByID(trackerID uuid.UUID) (*models.BaseTracker, error) {
 }
 
 // GetAllTrackers retrieves all trackers from the database
-// TODO: point out that This function needs to be adjusted to add more different tracker types
 func GetAllTrackers() ([]models.Tracker, error) {
 	SQL := `
 		SELECT 
