@@ -37,7 +37,7 @@ Welcome to	╚═╝╚═╝  ╚═╝╚═╝╚══════╝`)
 	registerHandlers(router)
 
 	// If you need goroutines for background tasks, such as tracker polling, start them here.
-	// TODO: periodically check mcp resources to update status and resource info in db
+	// TODO: sync resources in mcp to registered resources in db
 
 	slog.Info("Starting web server on " + cfg.Server.Address + "...")
 
