@@ -13,28 +13,12 @@ This document summarizes the rewrite of IRIS-Server from Python/FastAPI to Go/Gi
 
 ### 1.1 Tracker Management
 - **[internal/repository/trackerCreation.go](../internal/repository/trackerCreation.go)
-  - Implement `CreateChirpstackTracker()` function body
-  - Implement `CreateTETRATracker()` function body
-  - Note: This file requires editing for each new tracker type addition
-
-- **[internal/repository/trackers.go](../internal/repository/trackers.go)**
-  - Adjust `GetAllTrackers()` to support additional tracker types beyond Chirpstack
+  - Implement `CreateTETRATracker()` function body as soon as we know how to
+  - Finish the entire TETRA implementation
 
 ### 1.2 MCP Integration
-- **[internal/handlers/mcp.go](../internal/handlers/mcp.go)**
-  - **DECISION NEEDED:** Do we need operations enable/disable functionality? We just want to move pins in MCP
-  - Query operations table filtered by `active=true` for `getMCPOperations()`
-  - Parse `MCPOperationConfig` from request body (contains uid) for enable/disable operations
-  - Find operation by uid in database
-  - Set `operation.selected = true/false`
-  - Commit changes to database
-  - Return `{"status": 200}` responses
-  - Query for active AND selected operation in `getMCPConfig()`
-  - Build response object including `operation_selected` and `operation` (uid)
-
 - **[internal/mcp_control/positionMirror.go](../internal/mcp_control/positionMirror.go)**
   - Determine appropriate icon for marker (currently hardcoded as "BASIC_PIN") - should we read from resource type?
-  - **CRITICAL:** Determine where `siteplanId` comes from - do we need a UI page to select this?
 
 - **[cmd/iris-server/iris-server.go](../cmd/iris-server/iris-server.go)**
   - Implement periodic check of MCP resources to update status and resource info in database
@@ -49,41 +33,51 @@ This document summarizes the rewrite of IRIS-Server from Python/FastAPI to Go/Gi
 ## 2. API Routes Comparison
 
 ### 2.1 Routes Unchanged
-| Route | Method | Python | Go | Status |
-|-------|--------|--------|-----|--------|
-| `/tracker/` | GET | ✅ | ✅ | Implemented |
-| `/resources/` | GET | ✅ | ✅ | Implemented |
-| `/system/status` | GET | ✅ | ✅ | Implemented |
-| `/system/version` | GET | ✅ | ✅ | Partially implemented |
-| `/mcp/operations` | GET | ✅ | ✅ | Scaffolded |
-| `/mcp/operations/enable` | POST | ✅ | ✅ | Scaffolded |
-| `/mcp/operations/disable` | POST | ✅ | ✅ | Scaffolded |
-| `/mcp/start` | POST | ✅ | ✅ | Implemented |
+Routes that exist in both Python and Go with the same path and method:
+
+- `GET /tracker/` - List all trackers
+- `GET /resources/` - List all MCP resources  
+- `GET /system/status` - System health status
+- `GET /system/version` - Application version
+- `GET /mcp/operations` - Fetch MCP operations from API
+- `POST /mcp/start` - Configure and enable MCP integration
 
 ### 2.2 Routes Changed
 
 #### Gateway/Webhook Routes
-- **Python:** `/gateway/data` (POST)
-- **Go:** `/chirpstackGateway/data` (POST)
+- **Python:** `POST /gateway/data`
+- **Go:** `POST /chirpstackGateway/data`
 - **Reason:** More explicit naming to differentiate future tracker types (TETRA, etc.)
 
 #### Tracker Assignment Routes
-- **Python:** `/tracker/{instance_id}` (POST)
+- **Python:** `POST /tracker/{instance_id}`
   - Body: `TrackerUpdateModel` with resource field
-- **Go:** `/tracker/assign/{tracker_id}/{resource_id}` (POST)
+  - Uses integer IDs
+- **Go:** `POST /tracker/assign/{tracker_id}/{resource_id}`
   - Resource ID now in URL path
   - Support for unassignment via empty resource_id
   - Uses UUID instead of integer IDs
 - **Reason:** More RESTful design, clearer intent, supports resource unassignment
 
+#### MCP Configuration
+- **Python:** `GET /mcp/config` returns operation info with `operation_selected` and `operation` fields
+- **Go:** `GET /mcp/config` returns only basic config (enabled, api_key, url, selected operation and selected siteplan). The differenciation between operation and operation_selected got removed.
+- **Reason:** Simpler design that only stores data that is necessary for IRIS functionality and queries needed data from MCP dynamically.
+
 ### 2.3 New Routes in Go
 | Route | Method | Purpose |
 |-------|--------|---------|
 | `/tracker/rename/{tracker_id}` | POST | Rename tracker with new name in body |
-| `/mcp/config` | GET | Retrieve current MCP configuration |
+| `/mcp/operations/set/{id}` | POST | Select MCP operation (replaces enable/disable) |
+| `/mcp/siteplans` | GET | Retrieve MCP siteplans for selected operation |
+| `/mcp/siteplans/set/{id}` | POST | Select active siteplan for marker placement |
 
-### 2.4 Routes Not Yet Implemented in Go
-- None (all Python routes have Go equivalents, though some are scaffolded)
+### 2.4 Deleted Routes
+Routes that existed in Python but were removed in Go:
+
+- `POST /mcp/operations/enable` 
+- `POST /mcp/operations/disable`
+Operation enable/disable should be handled in MCP itself. We now only select an operation to be able to display siteplan options.
 
 ---
 
@@ -122,8 +116,9 @@ This document summarizes the rewrite of IRIS-Server from Python/FastAPI to Go/Gi
 - **Benefit:** Go version uses cleaner normalized schema, easier to extend to many-to-many if needed
 
 ### 3.2 New Tables in Go
-- `mcp_config` - Stores MCP server configuration (enabled, url, api_key)
+- `mcp_config` - Stores MCP server configuration (enabled, url, api_key, operation_id, siteplan_id)
 - `tracker_resources` - Junction table for tracker-resource assignments (replaces Python's direct foreign key)
+- `resource_marker` - Stores marker IDs per resource per siteplan (enables multiple markers for different siteplans)
 
 ### 3.3 Removed Fields
 - **Python `operations` table:** Not yet implemented in Go (TODO: determine if needed)
@@ -136,11 +131,6 @@ This document summarizes the rewrite of IRIS-Server from Python/FastAPI to Go/Gi
 
 ### 4.1 Architecture & Code Structure
 
-#### Repository Pattern
-- **Python:** CRUD functions directly in `tracking/db/crud.py`
-- **Go:** Clean repository layer in `internal/repository/` with interface abstraction
-- **Benefit:** Better separation of concerns, easier testing
-
 #### Tracker Abstraction
 - **Python:** Concrete `Tracker` class with SQLAlchemy ORM
 - **Go:** 
@@ -151,26 +141,15 @@ This document summarizes the rewrite of IRIS-Server from Python/FastAPI to Go/Gi
 
 #### Configuration Management
 - **Python:** `Settings` class loaded via Pydantic settings
-- **Go:** `Config` struct loaded via `caarlos0/env` with structured sub-configs
-- **Benefit:** More granular organization (MCPConfig, SQLConfig, SentryConfig)
+- **Go:** `Config` struct loaded via `caarlos0/env` with structured sub-configs from environment variables
+- **Benefit:** More granular organization (MCPConfig, SQLConfig, SentryConfig), config changable from docker-compose file
 
 ### 4.2 Chirpstack Message Handling
-
-#### Message Parsing
-- **Python:** 
-  - Uses Pydantic models with discriminated unions
-  - Type checking via `isinstance()`
-  - Separate model classes: `ChirpstackPayloadBatteryMessage`, `ChirpstackPayloadLatitudeMessage`, etc.
-- **Go:**
-  - Uses protobuf `structpb.Struct` from official Chirpstack API
-  - `.AsMap()` conversion to `map[string]interface{}`
-  - Type assertions for dynamic JSON-like structures
-- **Benefit:** Go uses official Chirpstack protobuf definitions for better compatibility
 
 #### Update Logic
 - **Python:** Compares message timestamp against `lastUpdated` before applying updates
 - **Go:** Currently missing timestamp comparison (TODO in implementation)
-- **Impact:** Go version may need to add timestamp validation
+- **Impact:** Go version may need to add timestamp validation - is that actually a problem?
 
 ### 4.3 MCP Integration
 
@@ -180,32 +159,30 @@ This document summarizes the rewrite of IRIS-Server from Python/FastAPI to Go/Gi
   - Updates resources from MCP tableau
 - **Go:**
   - Direct HTTP client in `internal/mcp_control/positionMirror.go`
-  - `SyncTrackerPositionToMCP()` for pushing tracker positions to markers
-  - Stores marker ID mapping in database
-  - sync from mcp to go still missing
-- **Benefit:** When implemented, Go version supports bidirectional sync, Python only pulls resources
+  - `UpdateTrackerInMCP()` for pushing tracker positions to markers
+  - **Multi-siteplan support:** Stores one marker ID per resource per siteplan in `resource_marker` table
+  - Automatically uses currently selected siteplan from `mcp_config`
+  - Creates new marker if none exists for resource+siteplan combination
+  - Updates existing marker if found
+  - Sync from MCP to Go still missing (TODO: periodic resource updates)
+- **Benefit:** Go version supports multiple siteplans with separate markers, Python limited to single marker per resource
 
-#### Operations Management
+#### Operations and Siteplans Management
 - **Python:** 
   - Fetches operations from MCP on startup
   - Stores in database with `selected` flag
   - Filters resources by selected operation
 - **Go:** 
-  - Operations functionality scaffolded but questioned in TODO
-  - **DECISION NEEDED:** May simplify to just marker position sync
-- **Impact:** Go version may reduce complexity by eliminating operation selection
+  - Fetches operations dynamically via `/mcp/operations` endpoint
+  - Stores selected operation ID in `mcp_config.operation_id`
+  - Fetches siteplans based on operation's place ID
+  - Stores selected siteplan ID in `mcp_config.siteplan_id`
+  - Validates operations and siteplans exist in MCP before saving
+  - **New workflow:** Select operation → Get associated place → Fetch siteplans for place → Select siteplan
+- **Benefit:** Go version has cleaner API design with separate operation/siteplan selection, validation against live MCP data
 
 
-### 4.4 Error Handling
-
-#### Database Errors
-- **Python:** SQLAlchemy exceptions
-- **Go:** 
-  - pgx errors with `pgconn.PgError` type assertions
-  - Explicit error code checking (e.g., `23505` for unique violations)
-- **Benefit:** Go has more explicit PostgreSQL error code handling
-
-### 4.5 Concurrency
+### 4.4 Concurrency
 
 #### Request Handling
 - **Python:** FastAPI async/await with event loop
@@ -254,25 +231,30 @@ This document summarizes the rewrite of IRIS-Server from Python/FastAPI to Go/Gi
 - Automatic `updated_at` timestamp updates via PostgreSQL triggers
 - Python relies on application-level timestamp management
 
+### 5.8 Multi-Siteplan Marker Support
+- **New mechanic:** One marker ID stored per resource per siteplan
+- `resource_marker` table with composite key (resource_id, siteplan_id)
+- When updating tracker position, system:
+  1. Retrieves currently selected siteplan from `mcp_config`
+  2. Looks up marker ID for resource+siteplan combination
+  3. Creates new marker if none exists, updates existing marker otherwise
+- **Benefit:** Resources can have different markers on different siteplans
+- **Use case:** Same vehicle tracked on multiple operation siteplans simultaneously
+
 ---
 
 ## 6. Features Left Out
 
-### 6.1 MCP Operations Table
-- **Status:** Scaffolded but not implemented
-- **Reason:** Functionality questioned - may only need marker position sync
-- **Python Feature:** Full operation selection with `active`/`selected` flags
-- **Impact:** Simpler Go implementation if removed
+### 6.1 MCP Operations Database Table
+- **Status:** Not implemented - operations queried dynamically from MCP API
+- **Design Decision:** Store only selected operation ID in `mcp_config`, not full operations table
+- **Python Feature:** Stores operations locally in database with `active`/`selected` flags
+- **Benefit:** Go version always has current data from MCP, no sync issues with stale local operations
 
 ### 6.2 Background Resource Sync
 - **Status:** TODO in main.go
 - **Python Feature:** Scheduled `get_mcp_data()` task pulls resources from MCP
 - **Impact:** Go version needs goroutine with periodic execution
-
-### 6.3 TETRA Implementation
-- **Status:** Models and database schema ready, no implementation
-- **Python Feature:** N/A (not in Python version either)
-- **Impact:** Planned feature for both versions
 
 ### 6.4 FastAPI Automatic Documentation
 - **Status:** No equivalent in Go/Gin
@@ -282,23 +264,16 @@ This document summarizes the rewrite of IRIS-Server from Python/FastAPI to Go/Gi
 
 ---
 
-## 8. Migration Considerations
+## 7. Migration Considerations
 
-### 8.1 Data Migration
-- **Database:** Schema changes require migration script
-  - Convert integer IDs to UUIDs for resources
-  - Split trackers into base + type-specific tables
-  - Migrate `lastUpdated` unix timestamps to PostgreSQL timestamps
-- **Approach:** Write migration script or fresh database initialization
-
-### 8.2 API Compatibility
+### 7.1 API Compatibility
 - **Frontend Changes Needed:**
   - Update Chirpstack webhook URL: `/gateway/data` → `/chirpstackGateway/data`
   - Update tracker assignment endpoint: `/tracker/{id}` → `/tracker/assign/{tracker_id}/{resource_id}`
   - Handle UUID strings instead of integers for IDs
   - New tracker rename endpoint available
 
-### 8.3 Configuration Changes
+### 7.2 Configuration Changes
 - **Environment Variables:**
   - MCP configuration now includes `MCP_ENABLED`, `MCP_SERVER_URL`, `MCP_API_KEY`
   - SQL configuration more granular: `SQL_HOST`, `SQL_PORT`, `SQL_USER`, `SQL_PASSWORD`, `SQL_DB_NAME`
@@ -310,17 +285,17 @@ This document summarizes the rewrite of IRIS-Server from Python/FastAPI to Go/Gi
 
 ### 9.1 Critical Path
 1. ✅ Complete Chirpstack message parsing (battery, lat/long) - **DONE**
-2. ⚠️ **FIX CRITICAL BUG:** Implement `CreateChirpstackTracker()` - currently just returns nil!
-3. ⚠️ **FIX CRITICAL BUG:** Fix `UpdateTracker()` - wrong field names, wrong SQL columns, inverted logic
-4. ✅ Implement Chirpstack webhook handler structure - **DONE** (but broken due to bugs above)
-5. ✅ Implement tracker rename functionality - **DONE**
-6. ✅ Implement MCP position sync (POST/PUT markers) - **DONE**
-7. ⚠️ Decide on MCP operations functionality (keep or simplify)
-8. 🔲 Save marker ID to resource in database (TODO in positionMirror.go)
-9. 🔲 Resolve siteplanId requirement for MCP markers
+2. ✅ Implement Chirpstack webhook handler structure - **DONE** (but broken due to bugs above)
+3. ✅ Implement tracker rename functionality - **DONE**
+4. ✅ Implement MCP position sync (POST/PUT markers) - **DONE**
+5. ✅ Implement MCP operations selection - **DONE**
+6. ✅ Implement MCP siteplans fetching and selection - **DONE**
+7. ✅ Implement marker-per-siteplan storage mechanism - **DONE**
+8.  ✅ Save marker ID to resource in database - **DONE** (UpdateMarkerIDForResource)
+9.  ✅ Resolve siteplanId requirement - **DONE** (stored in mcp_config, used from resource_marker)
 10. 🔲 Add background goroutine for periodic MCP resource sync
 11. 🔲 Complete system version endpoint
-12. 🔲 Testing with real Chirpstack webhooks and MCP integration (cannot test until bugs fixed)
+12. 🔲 Testing with real Chirpstack webhooks and MCP integration (cannot test until tracker creation bugs fixed)
 
 ### 9.2 Future Enhancements
 - TETRA tracker implementation
@@ -333,11 +308,8 @@ This document summarizes the rewrite of IRIS-Server from Python/FastAPI to Go/Gi
 
 ## 10. Open Questions
 
-1. **MCP Operations:** Do we need the full operation enable/disable functionality, or just marker position sync?
-2. **Siteplan ID:** Where does `siteplanId` come from for MCP markers? Need UI page for selection?
-3. **Marker Icons:** Should icon type be determined from resource type, or remain hardcoded?
-4. **Version Info:** Should version be build-time variable, config file, or git tag?
-5. **Background Tasks:** What interval for periodic MCP resource checks? Use cron-like scheduler or simple ticker?
+1. **Marker Icons:** Should icon type be determined from resource type, or remain hardcoded as "BASIC_PIN"?
+2. **Version Info:** Should version be build-time variable, config file, or git tag?
 
 ---
 
