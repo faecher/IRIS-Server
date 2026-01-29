@@ -3,6 +3,7 @@ package repository
 import (
 	"IRIS-Server/internal/models"
 	"context"
+	"fmt"
 
 	"github.com/gofrs/uuid/v5"
 )
@@ -24,7 +25,7 @@ func CreateChirpstackTracker(tracker *models.ChirpstackTracker) error {
 		tracker.Position.Latitude,
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to insert tracker: %w", err)
 	}
 
 	// Then insert into chirpstack_trackers table
@@ -35,7 +36,7 @@ func CreateChirpstackTracker(tracker *models.ChirpstackTracker) error {
 		tracker.DevEUI,
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to insert chirpstack tracker: %w", err)
 	}
 
 	tracker.ID = newID
@@ -43,7 +44,9 @@ func CreateChirpstackTracker(tracker *models.ChirpstackTracker) error {
 	return nil
 }
 
+// CreateTetraTracker creates a new Tetra tracker record in the database
 func CreateTetraTracker(tracker *models.TetraTracker) error {
+	_ = tracker
 	// TODO
 	return nil
 }

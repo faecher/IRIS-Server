@@ -15,18 +15,19 @@ type Tracker interface {
 
 // Position represents a GPS coordinate
 type Position struct {
-	Longitude float64 `json:"lon" db:"position_longitude"`
-	Latitude  float64 `json:"lat" db:"position_latitude"`
+	Longitude float64 `db:"position_longitude" json:"lon"`
+	Latitude  float64 `db:"position_latitude"  json:"lat"`
 }
 
 // BaseTracker contains common fields for all tracker types
 type BaseTracker struct {
-	Position   `json:"position"`
-	Resource   `json:"resource"`
-	ID         uuid.UUID `json:"id" db:"tracker_id"`
-	Name       string    `json:"name" db:"name"`
-	Battery    int16     `json:"battery" db:"battery"`
-	LastUpdate time.Time `json:"lastUpdate" db:"updated_at"`
+	Position `json:"position"`
+	Resource `json:"resource"`
+
+	ID         uuid.UUID `db:"tracker_id" json:"id"`
+	Name       string    `db:"name"       json:"name"`
+	Battery    int16     `db:"battery"    json:"battery"`
+	LastUpdate time.Time `db:"updated_at" json:"lastUpdate"`
 }
 
 // GetPosition returns the tracker's GPS position

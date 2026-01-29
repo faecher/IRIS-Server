@@ -1,8 +1,11 @@
-package mcp_control
+// Package mcpcontrol provides functions to interact with the MCP (Medical Care Platform) system.
+package mcpcontrol
 
 import (
 	"IRIS-Server/internal/models"
+	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"time"
@@ -13,8 +16,10 @@ var (
 		Timeout: 10 * time.Second,
 	}
 
+	// MCPConfig holds the configuration for MCP integration
 	MCPConfig models.MCPConfig
 
+	// ErrMCPDisabled indicates that MCP integration is disabled
 	ErrMCPDisabled = errors.New("MCP integration is disabled")
 )
 
@@ -27,15 +32,20 @@ func mcpRequest(method, endpoint string, body io.ReadCloser) (*http.Response, er
 		return nil, ErrMCPDisabled
 	}
 
-	req, err := http.NewRequest(method, MCPConfig.URL+endpoint, body)
+	req, err := http.NewRequestWithContext(context.Background(), method, MCPConfig.URL+endpoint, body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create MCP request: %w", err)
 	}
 
 	req.Header.Set("Api-Key", MCPConfig.APIKey)
-	req.Header.Set("accept", "*/*")
+	req.Header.Set("Accept", "*/*")
 
 	req.Body = body
 
-	return mcpClient.Do(req)
+	resp, err := mcpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to perform MCP request: %w", err)
+	}
+
+	return resp, nil
 }

@@ -2,9 +2,11 @@ package handlers
 
 import (
 	"IRIS-Server/internal/chirpstack"
-	"IRIS-Server/internal/mcp_control"
+	"IRIS-Server/internal/mcpcontrol"
 	"IRIS-Server/internal/models"
 	"IRIS-Server/internal/repository"
+	"errors"
+	"fmt"
 	"math"
 	"net/http"
 
@@ -13,6 +15,10 @@ import (
 	"github.com/gofrs/uuid/v5"
 )
 
+// ErrMissingDevEUI indicates that the DevEUI is missing in the Chirpstack payload
+var ErrMissingDevEUI = errors.New("missing DevEUI in payload")
+
+// GatewayHandler registers all Chirpstack gateway HTTP endpoints
 func GatewayHandler(router *gin.Engine) {
 	gatewayGroup := router.Group("/chirpstackGateway")
 
@@ -38,22 +44,8 @@ func handleChirpstackWebhook(c *gin.Context) {
 		return
 	}
 
-	var upMessage integration.UplinkEvent
-	err := c.BindJSON(&upMessage)
+	upMessage, trackerID, eui, err := getTrackerAndEuiFromContext(c)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON payload: " + err.Error()})
-		return
-	}
-
-	eui := upMessage.GetDeviceInfo().GetDevEui()
-	if eui == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing DevEUI in payload"})
-		return
-	}
-
-	trackerID, err := repository.GetTrackerByDevEUI(eui)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error: " + err.Error()})
 		return
 	}
 
@@ -66,9 +58,55 @@ func handleChirpstackWebhook(c *gin.Context) {
 			Longitude: math.Inf(-1),
 		},
 	}
-	chirpstack.ParseChirpstackTrackerMessage(&upMessage, &tracker)
+	err = chirpstack.ParseChirpstackTrackerMessage(upMessage, &tracker)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse tracker message: " + err.Error()})
+		return
+	}
 
-	if trackerID == uuid.Nil { // Tracker unknown
+	err = updateTrackerPositionInDB(c, tracker, eui)
+	if err != nil {
+		return
+	}
+
+	err = mcpcontrol.UpdateTrackerInMCP(tracker.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update tracker in MCP: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "success"})
+}
+
+// getTrackerAndEuiFromContext extracts the tracker and DevEUI from the Chirpstack uplink event in the request context
+// This function also sets the appropriate HTTP error responses if extraction fails
+func getTrackerAndEuiFromContext(c *gin.Context) (*integration.UplinkEvent, uuid.UUID, string, error) {
+	var upMessage *integration.UplinkEvent
+	err := c.BindJSON(&upMessage)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON payload: " + err.Error()})
+		return upMessage, uuid.Nil, "", fmt.Errorf("invalid JSON payload: %w", err)
+	}
+
+	eui := upMessage.GetDeviceInfo().GetDevEui()
+	if eui == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing DevEUI in payload"})
+		return upMessage, uuid.Nil, "", ErrMissingDevEUI
+	}
+
+	trackerID, err := repository.GetTrackerByDevEUI(eui)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error: " + err.Error()})
+		return upMessage, uuid.Nil, "", fmt.Errorf("database error: %w", err)
+	}
+
+	return upMessage, trackerID, eui, nil
+}
+
+// updateTrackerPositionInDB creates or updates the tracker record in the database
+// This function also sets the appropriate HTTP error responses if database operations fail
+func updateTrackerPositionInDB(c *gin.Context, tracker models.BaseTracker, eui string) error {
+	if tracker.ID == uuid.Nil { // Tracker unknown
 		chirpstackTracker := models.ChirpstackTracker{
 			BaseTracker: tracker, DevEUI: eui,
 		}
@@ -76,21 +114,15 @@ func handleChirpstackWebhook(c *gin.Context) {
 		err := repository.CreateChirpstackTracker(&chirpstackTracker)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create tracker: " + err.Error()})
-			return
+			return fmt.Errorf("failed to create tracker: %w", err)
 		}
 	} else {
 		err := repository.UpdateTracker(tracker)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update tracker: " + err.Error()})
-			return
+			return fmt.Errorf("failed to update tracker: %w", err)
 		}
 	}
 
-	err = mcp_control.UpdateTrackerInMCP(tracker.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update tracker in MCP: " + err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"status": "success"})
+	return nil
 }

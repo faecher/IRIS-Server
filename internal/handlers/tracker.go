@@ -10,13 +10,13 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
+// TrackerHandler registers all tracker-related HTTP endpoints
 func TrackerHandler(router *gin.Engine) {
 	trackerGroup := router.Group("/tracker")
 
 	trackerGroup.GET("/", listTrackers)
 	trackerGroup.POST("assign/:tracker_id/:resource_id", assignResourceToTracker)
 	trackerGroup.POST("rename/:tracker_id", renameTracker)
-
 }
 
 // listTrackers returns all trackers in the system
@@ -85,13 +85,10 @@ func assignResourceToTracker(c *gin.Context) {
 		}
 
 		err = repository.UpdateTrackerResource(trackerID, resourceID)
-		if err != nil {
-			var pgErr *pgconn.PgError
-			if errors.As(err, &pgErr) {
-				if pgErr.Code == "23505" { // unique_violation
-					c.JSON(http.StatusConflict, gin.H{"error": "Resource is already assigned to another tracker"})
-				}
-			}
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" { // unique_violation
+			c.JSON(http.StatusConflict, gin.H{"error": "Resource is already assigned to another tracker"})
+			return
 		}
 	}
 	if err != nil {
@@ -124,7 +121,8 @@ func renameTracker(c *gin.Context) {
 	var req struct {
 		NewName string `json:"newName"`
 	}
-	if err := c.BindJSON(&req); err != nil {
+	err = c.BindJSON(&req)
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
 		return
 	}

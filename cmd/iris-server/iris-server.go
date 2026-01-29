@@ -1,3 +1,4 @@
+// Package main implements the entry point for the IRIS Server application.
 package main
 
 import (
@@ -7,6 +8,7 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
@@ -49,8 +51,12 @@ Welcome to	╚═╝╚═╝  ╚═╝╚═╝╚══════╝`)
 	slog.Info("Starting web server on " + cfg.Server.Address + "...")
 
 	server := &http.Server{
-		Addr:    cfg.Server.Address,
-		Handler: router,
+		Addr:           cfg.Server.Address,
+		Handler:        router,
+		ReadTimeout:    time.Duration(cfg.Server.ReadTimeout) * time.Second,
+		WriteTimeout:   time.Duration(cfg.Server.WriteTimeout) * time.Second,
+		IdleTimeout:    time.Duration(cfg.Server.IdleTimeout) * time.Minute,
+		MaxHeaderBytes: cfg.Server.MaxHeaderBytes,
 	}
 
 	err = server.ListenAndServe()

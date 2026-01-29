@@ -1,9 +1,10 @@
 package handlers
 
 import (
-	"IRIS-Server/internal/mcp_control"
+	"IRIS-Server/internal/mcpcontrol"
 	"IRIS-Server/internal/models"
 	"IRIS-Server/internal/repository"
+	"fmt"
 	"net/http"
 	"slices"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"github.com/gofrs/uuid/v5"
 )
 
+// MCPHandler registers all MCP integration HTTP endpoints
 func MCPHandler(router *gin.Engine) {
 	mcpGroup := router.Group("/mcp")
 
@@ -23,7 +25,6 @@ func MCPHandler(router *gin.Engine) {
 
 	mcpGroup.POST("/start", startMCPIntegration)
 	mcpGroup.GET("/config", getMCPConfig)
-
 }
 
 // getMCPOperations returns all active MCP operations
@@ -35,7 +36,7 @@ func MCPHandler(router *gin.Engine) {
 // @Failure 500 {object} map[string]string "Failed to fetch MCP operations"
 // @Router /mcp/operations [get]
 func getMCPOperations(c *gin.Context) {
-	operations, err := mcp_control.GetMCPOperations()
+	operations, err := mcpcontrol.GetMCPOperations()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch MCP operations: " + err.Error()})
 		return
@@ -61,7 +62,7 @@ func setMCPOperation(c *gin.Context) {
 	}
 
 	// Check if operation exists in MCP
-	allOperations, err := mcp_control.GetMCPOperations()
+	allOperations, err := mcpcontrol.GetMCPOperations()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch MCP operations: " + err.Error()})
 		return
@@ -93,7 +94,7 @@ func setMCPOperation(c *gin.Context) {
 // @Failure 500 {object} map[string]string "Failed to fetch siteplans or no operation selected"
 // @Router /mcp/siteplans [get]
 func getMCPSiteplans(c *gin.Context) {
-	siteplans, err := mcp_control.GetMCPSiteplans()
+	siteplans, err := mcpcontrol.GetMCPSiteplans()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch MCP siteplans: " + err.Error()})
 		return
@@ -118,7 +119,7 @@ func setMCPSiteplan(c *gin.Context) {
 		return
 	}
 	// Check if siteplan exists in MCP
-	allSiteplans, err := mcp_control.GetMCPSiteplans()
+	allSiteplans, err := mcpcontrol.GetMCPSiteplans()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch MCP siteplans: " + err.Error()})
 		return
@@ -153,7 +154,8 @@ func setMCPSiteplan(c *gin.Context) {
 func startMCPIntegration(c *gin.Context) {
 	var config models.MCPConfig
 
-	if err := c.ShouldBindJSON(&config); err != nil {
+	err := c.ShouldBindJSON(&config)
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request: " + err.Error()})
 		return
 	}
@@ -167,7 +169,7 @@ func startMCPIntegration(c *gin.Context) {
 	config.URL = strings.TrimSuffix(config.URL, "/")
 
 	// Test MCP connection
-	err := testMCPConnection(config)
+	err = testMCPConnection(config)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "MCP server not reachable: " + err.Error()})
 		return
@@ -178,10 +180,10 @@ func startMCPIntegration(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save MCP config: " + err.Error()})
 		return
-	} else {
-		// update local MCPConfig variable only if DB update was successful
-		mcp_control.MCPConfig = config
 	}
+
+	// update local MCPConfig variable only if DB update was successful
+	mcpcontrol.MCPConfig = config
 
 	c.Status(http.StatusOK)
 }
@@ -211,16 +213,16 @@ func getMCPConfig(c *gin.Context) {
 }
 
 func testMCPConnection(newConfig models.MCPConfig) error {
-	oldConfig := mcp_control.MCPConfig
+	oldConfig := mcpcontrol.MCPConfig
 	defer func() {
-		mcp_control.MCPConfig = oldConfig
+		mcpcontrol.MCPConfig = oldConfig
 	}()
 
-	mcp_control.MCPConfig = newConfig
+	mcpcontrol.MCPConfig = newConfig
 
-	err := mcp_control.TestMCPConnection()
+	err := mcpcontrol.TestMCPConnection()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to test MCP connection: %w", err)
 	}
 
 	return nil

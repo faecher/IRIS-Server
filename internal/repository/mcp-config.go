@@ -3,11 +3,14 @@ package repository
 import (
 	"IRIS-Server/internal/models"
 	"context"
+	"errors"
+	"fmt"
 
 	"github.com/gofrs/uuid/v5"
 	"github.com/jackc/pgx/v5"
 )
 
+// GetMCPConfig retrieves the MCP integration configuration. Returns empty config if none exists.
 func GetMCPConfig() (models.MCPConfig, error) {
 	var config models.MCPConfig
 
@@ -20,16 +23,17 @@ func GetMCPConfig() (models.MCPConfig, error) {
 		&config.OperationID,
 		&config.SiteplanID,
 	)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return models.MCPConfig{}, nil // No config found
 	}
 	if err != nil {
-		return models.MCPConfig{}, err
+		return models.MCPConfig{}, fmt.Errorf("failed to query MCP config: %w", err)
 	}
 
 	return config, nil
 }
 
+// UpdateMCPConfig replaces the entire MCP configuration (singleton)
 func UpdateMCPConfig(newConfig models.MCPConfig) error {
 	// Treat as singleton Config
 	SQL1 := `DELETE FROM mcp_config;`
@@ -37,14 +41,18 @@ func UpdateMCPConfig(newConfig models.MCPConfig) error {
 
 	_, err := DBConnPool.Exec(context.Background(), SQL1)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to delete old MCP config: %w", err)
 	}
 
 	_, err = DBConnPool.Exec(context.Background(), SQL2, newConfig.URL, newConfig.APIKey, newConfig.Enabled)
+	if err != nil {
+		return fmt.Errorf("failed to insert new MCP config: %w", err)
+	}
 
-	return err
+	return nil
 }
 
+// UpdateMCPOperation sets the selected MCP operation ID
 func UpdateMCPOperation(operationID uuid.UUID) error {
 	// Ensure mcp_config row exists, then update operation_id
 	SQL := `INSERT INTO mcp_config (id, url, api_key, enabled, operation_id) 
@@ -52,39 +60,48 @@ func UpdateMCPOperation(operationID uuid.UUID) error {
 	        ON CONFLICT (id) DO UPDATE SET operation_id = $1`
 
 	_, err := DBConnPool.Exec(context.Background(), SQL, operationID)
+	if err != nil {
+		return fmt.Errorf("failed to update MCP operation: %w", err)
+	}
 
-	return err
+	return nil
 }
 
+// GetMCPOperation retrieves the currently selected MCP operation ID
 func GetMCPOperation() (uuid.UUID, error) {
 	SQL := `SELECT operation_id FROM mcp_config WHERE id = 1`
 
 	var operationID uuid.UUID
 	err := DBConnPool.QueryRow(context.Background(), SQL).Scan(&operationID)
 	if err != nil {
-		return uuid.Nil, err
+		return uuid.Nil, fmt.Errorf("failed to query MCP operation: %w", err)
 	}
 
 	return operationID, nil
 }
 
+// UpdateMCPSiteplan sets the selected MCP siteplan ID
 func UpdateMCPSiteplan(siteplanID uuid.UUID) error {
 	// Ensure mcp_config row exists, then update siteplan_id
 	SQL := `INSERT INTO mcp_config (id, url, api_key, enabled, siteplan_id) 
 	        VALUES (1, '', '', false, $1)
 	        ON CONFLICT (id) DO UPDATE SET siteplan_id = $1`
 	_, err := DBConnPool.Exec(context.Background(), SQL, siteplanID)
+	if err != nil {
+		return fmt.Errorf("failed to update MCP siteplan: %w", err)
+	}
 
-	return err
+	return nil
 }
 
+// GetMCPSiteplan retrieves the currently selected MCP siteplan ID
 func GetMCPSiteplan() (uuid.UUID, error) {
 	SQL := `SELECT siteplan_id FROM mcp_config WHERE id = 1`
 
 	var siteplanID uuid.UUID
 	err := DBConnPool.QueryRow(context.Background(), SQL).Scan(&siteplanID)
 	if err != nil {
-		return uuid.Nil, err
+		return uuid.Nil, fmt.Errorf("failed to query MCP siteplan: %w", err)
 	}
 
 	return siteplanID, nil

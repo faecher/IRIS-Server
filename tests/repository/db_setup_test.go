@@ -57,7 +57,7 @@ func DatabaseSetup() (*pgxpool.Pool, *postgres.PostgresContainer) {
 	}
 
 	// Init with the current database schema
-	err, _ = repository.CheckDBVersionAndInit(pool, false)
+	_, err = repository.CheckDBVersionAndInit(pool, false)
 	if err != nil {
 		panic(err)
 	}

@@ -1,7 +1,8 @@
+// Package handlers provides HTTP handlers for various system functionalities
 package handlers
 
 import (
-	"IRIS-Server/internal/mcp_control"
+	"IRIS-Server/internal/mcpcontrol"
 	"IRIS-Server/internal/repository"
 	"net/http"
 	"time"
@@ -11,6 +12,7 @@ import (
 
 var startTime time.Time
 
+// SystemHandler registers system monitoring and status HTTP endpoints
 func SystemHandler(router *gin.Engine) {
 	systemGroup := router.Group("/system")
 
@@ -30,7 +32,7 @@ func SystemHandler(router *gin.Engine) {
 // @Router /system/status [get]
 func getSystemStatus(c *gin.Context) {
 	dbStatus := repository.CheckDBConnection()
-	mcpStatus := mcp_control.TestMCPConnection()
+	mcpStatus := mcpcontrol.TestMCPConnection()
 	activeTrackers, err := repository.GetActiveTrackerCount()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to count active trackers"})

@@ -1,6 +1,8 @@
 package models
 
+// TetraTracker represents a tracker device using TETRA radio
 type TetraTracker struct {
 	BaseTracker
-	ISSI string `json:"issi" db:"issi"`
+
+	ISSI string `db:"issi" json:"issi"`
 }

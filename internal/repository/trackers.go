@@ -4,6 +4,7 @@ import (
 	"IRIS-Server/internal/models"
 	"context"
 	"errors"
+	"fmt"
 	"math"
 
 	"github.com/gofrs/uuid/v5"
@@ -11,21 +12,24 @@ import (
 )
 
 var (
+	// ErrNoDataToSave indicates that there is no data to save in the provided struct
 	ErrNoDataToSave = errors.New("no data to save in struct")
 )
 
+// GetActiveTrackerCount returns the number of trackers updated within the last 5 minutes
 func GetActiveTrackerCount() (int, error) {
 	SQL := `SELECT COUNT(*) FROM trackers WHERE updated_at >= NOW() - INTERVAL '5 minutes'`
 
 	var count int
 	err := DBConnPool.QueryRow(context.Background(), SQL).Scan(&count)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to query active tracker count: %w", err)
 	}
 
 	return count, nil
 }
 
+// GetTrackerByDevEUI returns the tracker ID for a given Chirpstack DevEUI. Returns uuid.Nil if not found.
 func GetTrackerByDevEUI(devEUI string) (uuid.UUID, error) {
 	SQL := `
 		SELECT tracker_id
@@ -35,10 +39,10 @@ func GetTrackerByDevEUI(devEUI string) (uuid.UUID, error) {
 
 	var trackerID uuid.UUID
 	err := DBConnPool.QueryRow(context.Background(), SQL, devEUI).Scan(&trackerID)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return uuid.Nil, nil // Tracker not found
 	} else if err != nil {
-		return uuid.Nil, err
+		return uuid.Nil, fmt.Errorf("failed to query tracker by devEUI: %w", err)
 	}
 
 	return trackerID, nil
@@ -66,20 +70,20 @@ func GetTrackerByID(trackerID uuid.UUID) (*models.BaseTracker, error) {
 		&resourceID,
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to query tracker by ID: %w", err)
 	}
 
 	if resourceID != nil {
 		err = fillTrackerResource(&tracker, *resourceID)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to fill tracker resource: %w", err)
 		}
 	}
 
 	return &tracker, nil
 }
 
-// GetAllTrackers retrieves all trackers from the database
+// GetAllTrackers retrieves all trackers with their assigned resources
 func GetAllTrackers() ([]models.Tracker, error) {
 	SQL := `
 		SELECT 
@@ -101,7 +105,7 @@ func GetAllTrackers() ([]models.Tracker, error) {
 
 	rows, err := DBConnPool.Query(context.Background(), SQL)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to query all trackers: %w", err)
 	}
 	defer rows.Close()
 
@@ -116,13 +120,13 @@ func GetAllTrackers() ([]models.Tracker, error) {
 			&base.Position.Longitude, &base.Position.Latitude,
 			&base.LastUpdate, &trackerType, &devEUI, &issi, &resourceID)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to scan tracker row: %w", err)
 		}
 
 		if resourceID != nil {
 			err = fillTrackerResource(&base, *resourceID)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("failed to fill tracker resource: %w", err)
 			}
 		}
 
@@ -143,6 +147,7 @@ func GetAllTrackers() ([]models.Tracker, error) {
 	return trackers, nil
 }
 
+// UpdateTrackerResource assigns a resource to a tracker, or updates an existing assignment
 func UpdateTrackerResource(trackerID, resourceID uuid.UUID) error {
 	SQL := `
 		INSERT INTO trackers_resource (tracker_id, resource_id)
@@ -151,32 +156,46 @@ func UpdateTrackerResource(trackerID, resourceID uuid.UUID) error {
 	`
 
 	_, err := DBConnPool.Exec(context.Background(), SQL, trackerID, resourceID)
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to update tracker resource: %w", err)
+	}
+
+	return nil
 }
 
+// RemoveTrackerAssignment removes a resource assignment from a tracker
 func RemoveTrackerAssignment(trackerID uuid.UUID) error {
 	SQL := `DELETE FROM trackers_resource WHERE tracker_id = $1`
 
 	_, err := DBConnPool.Exec(context.Background(), SQL, trackerID)
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to remove tracker assignment: %w", err)
+	}
+
+	return nil
 }
 
+// RenameTracker updates the name of a tracker
 func RenameTracker(trackerID uuid.UUID, newName string) error {
 	SQL := `UPDATE trackers SET name = $1 WHERE tracker_id = $2`
 
 	_, err := DBConnPool.Exec(context.Background(), SQL, newName, trackerID)
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to rename tracker: %w", err)
+	}
+
+	return nil
 }
 
-// UpdateTracker updates the DB entry for battery, lat and long values.
-// if the battery is < 0 or lat/long values are -inf, they are skipped
+// UpdateTracker updates battery and position values for a tracker.
+// Skips battery if < 0, skips position if latitude or longitude is infinity.
 // Caller is responsible to make sure the given tracker ID exists. Otherwise you will get an error
 func UpdateTracker(tracker models.BaseTracker) error {
-	SQL_LAT_LONG := `UPDATE trackers 
+	SQLLatLong := `UPDATE trackers 
 	SET position_latitude = $1, position_longitude = $2 
 	WHERE tracker_id = $3`
 
-	SQL_BATT := `UPDATE trackers 
+	SQLBatt := `UPDATE trackers 
 	SET battery = $1 
 	WHERE tracker_id = $2`
 
@@ -188,19 +207,19 @@ func UpdateTracker(tracker models.BaseTracker) error {
 	}
 
 	if batteryUpdate {
-		_, err := DBConnPool.Exec(context.Background(), SQL_BATT,
+		_, err := DBConnPool.Exec(context.Background(), SQLBatt,
 			tracker.Battery, tracker.ID,
 		)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to update tracker battery: %w", err)
 		}
 	}
 	if locationUpdate {
-		_, err := DBConnPool.Exec(context.Background(), SQL_LAT_LONG,
+		_, err := DBConnPool.Exec(context.Background(), SQLLatLong,
 			tracker.Position.Latitude, tracker.Position.Longitude, tracker.ID,
 		)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to update tracker position: %w", err)
 		}
 	}
 
@@ -214,7 +233,7 @@ func fillTrackerResource(tracker *models.BaseTracker, resourceID uuid.UUID) erro
 
 	resource, err := GetResourceByID(resourceID)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get resource by ID: %w", err)
 	}
 
 	tracker.Resource = *resource

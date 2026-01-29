@@ -1,79 +1,86 @@
-package mcp_control
+package mcpcontrol
 
 import (
 	"IRIS-Server/internal/models"
 	"IRIS-Server/internal/repository"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
+	"net/http"
 
 	"github.com/gofrs/uuid/v5"
 	"github.com/jackc/pgx/v5"
 )
 
+// ErrNoOperationSelected indicates that no MCP operation has been configured
 var ErrNoOperationSelected = errors.New("no MCP operation selected")
+
+// ErrNoPlaceAssociated indicates that the configured MCP operation has no associated place
 var ErrNoPlaceAssociated = errors.New("no place associated with MCP operation")
 
+// GetMCPOperations fetches all available operations from the MCP API
 func GetMCPOperations() ([]models.MCPOperation, error) {
 	resp, err := mcpRequest("GET", "/api/operations", nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to request MCP operations: %w", err)
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return nil, ErrMCPRequestFailed
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read Response Body: %w", err)
 	}
 
 	var operations []models.MCPOperation
 	err = json.Unmarshal(body, &operations)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to unmarshal MCP operations: %w", err)
 	}
 
 	return operations, nil
 }
 
+// GetMCPSiteplans fetches all siteplans for the currently selected operation
 func GetMCPSiteplans() ([]models.MCPSiteplan, error) {
 	// get current operation from DB
 	operationID, err := repository.GetMCPOperation()
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNoOperationSelected
 	} else if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get MCP operation: %w", err)
 	}
 
 	placeID, err := getMCPPlaceFromOrg(operationID)
 	if errors.Is(err, ErrNoPlaceAssociated) {
 		return nil, ErrNoPlaceAssociated
 	} else if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get MCP place: %w", err)
 	}
 
 	resp, err := mcpRequest("GET", "/api/siteplan/template?placeId="+placeID.String(), nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to request MCP siteplans: %w", err)
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return nil, ErrMCPRequestFailed
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read MCP siteplans response: %w", err)
 	}
 
 	var siteplans []models.MCPSiteplan
 	err = json.Unmarshal(body, &siteplans)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to unmarshal MCP siteplans: %w", err)
 	}
 
 	return siteplans, nil
@@ -82,23 +89,23 @@ func GetMCPSiteplans() ([]models.MCPSiteplan, error) {
 func getMCPPlaceFromOrg(orgID uuid.UUID) (uuid.UUID, error) {
 	resp, err := mcpRequest("GET", "/api/organizations/"+orgID.String(), nil)
 	if err != nil {
-		return uuid.Nil, err
+		return uuid.Nil, fmt.Errorf("failed to request MCP organization: %w", err)
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return uuid.Nil, ErrMCPRequestFailed
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return uuid.Nil, err
+		return uuid.Nil, fmt.Errorf("failed to read MCP organization response: %w", err)
 	}
 
 	var operation models.MCPOperation
 	err = json.Unmarshal(body, &operation)
 	if err != nil {
-		return uuid.Nil, err
+		return uuid.Nil, fmt.Errorf("failed to unmarshal MCP organization: %w", err)
 	}
 
 	if operation.Place == nil {

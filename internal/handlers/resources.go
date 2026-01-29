@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// ResourcesHandler registers resource-related HTTP endpoints
 func ResourcesHandler(router *gin.Engine) {
 	resourcesGroup := router.Group("/resources")
 

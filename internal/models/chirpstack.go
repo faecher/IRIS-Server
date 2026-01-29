@@ -3,7 +3,8 @@ package models
 // ChirpstackTracker represents a tracker device using Chirpstack LoRaWAN
 type ChirpstackTracker struct {
 	BaseTracker
-	DevEUI string `json:"deviceEUI" db:"dev_eui"`
+
+	DevEUI string `db:"dev_eui" json:"deviceEUI"`
 }
 
 // NewChirpstackTracker creates a new Chirpstack tracker instance
