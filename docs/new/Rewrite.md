@@ -110,14 +110,14 @@ Operation enable/disable should be handled in MCP itself. We now only select an 
 
 #### Tracker-Resource Relationship
 - **Python:** Direct foreign key `resourceId` in tracker table
-- **Go:** Separate junction table `tracker_resources` with `tracker_id` and `resource_id`
+- **Go:** Separate junction table `trackers_resource` with `tracker_id` and `resource_id`
   - One-to-many relationship enforced via UNIQUE constraint on `tracker_id`
   - Supports ON CONFLICT for upsert operations
 - **Benefit:** Go version uses cleaner normalized schema, easier to extend to many-to-many if needed
 
 ### 3.2 New Tables in Go
 - `mcp_config` - Stores MCP server configuration (enabled, url, api_key, operation_id, siteplan_id)
-- `tracker_resources` - Junction table for tracker-resource assignments (replaces Python's direct foreign key)
+- `trackers_resource` - Junction table for tracker-resource assignments (replaces Python's direct foreign key)
 - `resource_marker` - Stores marker IDs per resource per siteplan (enables multiple markers for different siteplans)
 
 ### 3.3 Removed Fields
