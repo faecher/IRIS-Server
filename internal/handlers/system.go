@@ -21,7 +21,13 @@ func SystemHandler(router *gin.Engine) {
 }
 
 // getSystemStatus returns system health status
-// GET /system/status
+// @Summary Get system status
+// @Description Returns system health information including database status, MCP connectivity, uptime, and active tracker count
+// @Tags system
+// @Produce json
+// @Success 200 {object} object{status=string,uptime=string,database=string,mcp=string,active-trackers=int} "System status information"
+// @Failure 500 {object} map[string]string "Failed to count active trackers"
+// @Router /system/status [get]
 func getSystemStatus(c *gin.Context) {
 	dbStatus := repository.CheckDBConnection()
 	mcpStatus := mcp_control.TestMCPConnection()
@@ -48,7 +54,12 @@ func getSystemStatus(c *gin.Context) {
 }
 
 // getSystemVersion returns the application version
-// GET /system/version
+// @Summary Get application version
+// @Description Returns the current version of the IRIS-Server application
+// @Tags system
+// @Produce json
+// @Success 200 {object} object{version=string} "Application version"
+// @Router /system/version [get]
 func getSystemVersion(c *gin.Context) {
 	// TODO: Read version from build-time variable or config
 	// TODO: Return version information

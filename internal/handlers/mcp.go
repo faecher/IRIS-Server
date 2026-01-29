@@ -27,7 +27,13 @@ func MCPHandler(router *gin.Engine) {
 }
 
 // getMCPOperations returns all active MCP operations
-// GET /mcp/operations
+// @Summary Get MCP operations
+// @Description Fetches all active operations from the MCP API
+// @Tags mcp
+// @Produce json
+// @Success 200 {array} models.MCPOperation "List of active operations"
+// @Failure 500 {object} map[string]string "Failed to fetch MCP operations"
+// @Router /mcp/operations [get]
 func getMCPOperations(c *gin.Context) {
 	operations, err := mcp_control.GetMCPOperations()
 	if err != nil {
@@ -38,8 +44,15 @@ func getMCPOperations(c *gin.Context) {
 	c.JSON(http.StatusOK, operations)
 }
 
-// enableMCPOperation marks an operation as selected
-// POST /mcp/operations/set/:id
+// setMCPOperation marks an operation as selected
+// @Summary Select MCP operation
+// @Description Validates and selects an operation from MCP. This operation will be used for subsequent siteplan selection.
+// @Tags mcp
+// @Param id path string true "Operation UUID"
+// @Success 200 "Operation selected successfully"
+// @Failure 400 {object} map[string]string "Invalid operation ID or operation not found in MCP"
+// @Failure 500 {object} map[string]string "Failed to save operation"
+// @Router /mcp/operations/set/{id} [post]
 func setMCPOperation(c *gin.Context) {
 	operationID, err := uuid.FromString(c.Param("id"))
 	if err != nil {
@@ -72,7 +85,13 @@ func setMCPOperation(c *gin.Context) {
 }
 
 // getMCPSiteplans returns all MCP siteplans
-// GET /mcp/siteplans
+// @Summary Get MCP siteplans
+// @Description Fetches all siteplans for the currently selected operation from the MCP API
+// @Tags mcp
+// @Produce json
+// @Success 200 {array} models.MCPSiteplan "List of siteplans"
+// @Failure 500 {object} map[string]string "Failed to fetch siteplans or no operation selected"
+// @Router /mcp/siteplans [get]
 func getMCPSiteplans(c *gin.Context) {
 	siteplans, err := mcp_control.GetMCPSiteplans()
 	if err != nil {
@@ -83,6 +102,15 @@ func getMCPSiteplans(c *gin.Context) {
 	c.JSON(http.StatusOK, siteplans)
 }
 
+// setMCPSiteplan selects a siteplan for the current operation
+// @Summary Select MCP siteplan
+// @Description Validates and selects a siteplan from MCP. This siteplan will be used for marker operations.
+// @Tags mcp
+// @Param id path string true "Siteplan UUID"
+// @Success 200 "Siteplan selected successfully"
+// @Failure 400 {object} map[string]string "Invalid siteplan ID or siteplan not found in MCP"
+// @Failure 500 {object} map[string]string "Failed to save siteplan"
+// @Router /mcp/siteplans/set/{id} [post]
 func setMCPSiteplan(c *gin.Context) {
 	siteplanID, err := uuid.FromString(c.Param("id"))
 	if err != nil {
@@ -113,7 +141,15 @@ func setMCPSiteplan(c *gin.Context) {
 }
 
 // startMCPIntegration configures and enables MCP integration
-// POST /mcp/start
+// @Summary Configure MCP integration
+// @Description Tests connection and saves MCP configuration (URL, API key, enabled state)
+// @Tags mcp
+// @Accept json
+// @Param config body models.MCPConfig true "MCP configuration"
+// @Success 200 "MCP integration configured successfully"
+// @Failure 400 {object} map[string]string "Invalid request or MCP server not reachable"
+// @Failure 500 {object} map[string]string "Failed to save configuration"
+// @Router /mcp/start [post]
 func startMCPIntegration(c *gin.Context) {
 	var config models.MCPConfig
 
@@ -151,7 +187,13 @@ func startMCPIntegration(c *gin.Context) {
 }
 
 // getMCPConfig returns current MCP configuration
-// GET /mcp/config
+// @Summary Get MCP configuration
+// @Description Returns the current MCP configuration (including sensitive data like full API key)
+// @Tags mcp
+// @Produce json
+// @Success 200 {object} object{enabled=bool,api_key=string,url=string,operation_id=string,siteplan_id=string} "Current MCP configuration"
+// @Failure 500 {object} map[string]string "Failed to fetch configuration"
+// @Router /mcp/config [get]
 func getMCPConfig(c *gin.Context) {
 	config, err := repository.GetMCPConfig()
 	if err != nil {
@@ -160,9 +202,11 @@ func getMCPConfig(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"enabled": config.Enabled,
-		"api_key": config.APIKey,
-		"url":     config.URL,
+		"enabled":      config.Enabled,
+		"api_key":      config.APIKey,
+		"url":          config.URL,
+		"operation_id": config.OperationID,
+		"siteplan_id":  config.SiteplanID,
 	})
 }
 

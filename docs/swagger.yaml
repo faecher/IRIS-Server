@@ -1,0 +1,456 @@
+basePath: /
+definitions:
+  models.BaseTracker:
+    properties:
+      battery:
+        type: integer
+      id:
+        type: string
+      lastUpdate:
+        type: string
+      name:
+        type: string
+      position:
+        $ref: '#/definitions/models.Position'
+      resource:
+        $ref: '#/definitions/models.Resource'
+      resourceId:
+        type: string
+    type: object
+  models.MCPConfig:
+    properties:
+      api_key:
+        type: string
+      enabled:
+        type: boolean
+      operation_id:
+        type: string
+      siteplan_id:
+        type: string
+      url:
+        type: string
+    type: object
+  models.MCPOperation:
+    properties:
+      active:
+        type: boolean
+      archived:
+        type: boolean
+      id:
+        type: string
+      place:
+        $ref: '#/definitions/models.MCPPlace'
+      title:
+        type: string
+    type: object
+  models.MCPPlace:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  models.MCPSiteplan:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  models.Position:
+    properties:
+      lat:
+        type: number
+      lon:
+        type: number
+    type: object
+  models.Resource:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+      status:
+        type: integer
+      type:
+        type: string
+    type: object
+host: 0.0.0.0:8080
+info:
+  contact: {}
+  description: Tracker and MCP integration
+  title: IRIS-Server
+  version: "1.0"
+paths:
+  /chirpstackGateway/data:
+    post:
+      consumes:
+      - application/json
+      description: Receives uplink events from Chirpstack HTTP integration, parses
+        tracker data, and updates database and MCP
+      parameters:
+      - description: Event type (must be 'up')
+        in: query
+        name: event
+        required: true
+        type: string
+      - description: Chirpstack uplink event payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Event processed successfully
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Unsupported event type, invalid JSON, or missing DevEUI
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Database or MCP update error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Chirpstack webhook endpoint
+      tags:
+      - gateway
+  /mcp/config:
+    get:
+      description: Returns the current MCP configuration (including sensitive data
+        like full API key)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Current MCP configuration
+          schema:
+            properties:
+              api_key:
+                type: string
+              enabled:
+                type: boolean
+              url:
+                type: string
+            type: object
+        "500":
+          description: Failed to fetch configuration
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get MCP configuration
+      tags:
+      - mcp
+  /mcp/operations:
+    get:
+      description: Fetches all active operations from the MCP API
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of active operations
+          schema:
+            items:
+              $ref: '#/definitions/models.MCPOperation'
+            type: array
+        "500":
+          description: Failed to fetch MCP operations
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get MCP operations
+      tags:
+      - mcp
+  /mcp/operations/set/{id}:
+    post:
+      description: Validates and selects an operation from MCP. This operation will
+        be used for subsequent siteplan selection.
+      parameters:
+      - description: Operation UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Operation selected successfully
+        "400":
+          description: Invalid operation ID or operation not found in MCP
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to save operation
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Select MCP operation
+      tags:
+      - mcp
+  /mcp/siteplans:
+    get:
+      description: Fetches all siteplans for the currently selected operation from
+        the MCP API
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of siteplans
+          schema:
+            items:
+              $ref: '#/definitions/models.MCPSiteplan'
+            type: array
+        "500":
+          description: Failed to fetch siteplans or no operation selected
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get MCP siteplans
+      tags:
+      - mcp
+  /mcp/siteplans/set/{id}:
+    post:
+      description: Validates and selects a siteplan from MCP. This siteplan will be
+        used for marker operations.
+      parameters:
+      - description: Siteplan UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Siteplan selected successfully
+        "400":
+          description: Invalid siteplan ID or siteplan not found in MCP
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to save siteplan
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Select MCP siteplan
+      tags:
+      - mcp
+  /mcp/start:
+    post:
+      consumes:
+      - application/json
+      description: Tests connection and saves MCP configuration (URL, API key, enabled
+        state)
+      parameters:
+      - description: MCP configuration
+        in: body
+        name: config
+        required: true
+        schema:
+          $ref: '#/definitions/models.MCPConfig'
+      responses:
+        "200":
+          description: MCP integration configured successfully
+        "400":
+          description: Invalid request or MCP server not reachable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to save configuration
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Configure MCP integration
+      tags:
+      - mcp
+  /resources/:
+    get:
+      description: Returns a list of all resources from the MCP system
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of resources
+          schema:
+            items:
+              $ref: '#/definitions/models.Resource'
+            type: array
+        "500":
+          description: Failed to fetch resources
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get all resources
+      tags:
+      - resources
+  /system/status:
+    get:
+      description: Returns system health information including database status, MCP
+        connectivity, uptime, and active tracker count
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: System status information
+          schema:
+            properties:
+              active-trackers:
+                type: integer
+              database:
+                type: string
+              mcp:
+                type: string
+              status:
+                type: string
+              uptime:
+                type: string
+            type: object
+        "500":
+          description: Failed to count active trackers
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get system status
+      tags:
+      - system
+  /system/version:
+    get:
+      description: Returns the current version of the IRIS-Server application
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Application version
+          schema:
+            properties:
+              version:
+                type: string
+            type: object
+      summary: Get application version
+      tags:
+      - system
+  /tracker/:
+    get:
+      description: Returns a list of all trackers in the system with their current
+        status, position, and assigned resources
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of trackers
+          schema:
+            items:
+              $ref: '#/definitions/models.BaseTracker'
+            type: array
+        "500":
+          description: Failed to fetch trackers
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get all trackers
+      tags:
+      - trackers
+  /tracker/assign/{tracker_id}/{resource_id}:
+    post:
+      description: Assigns a resource to a tracker or removes the assignment. Pass
+        empty string for resource_id to unassign.
+      parameters:
+      - description: Tracker UUID
+        in: path
+        name: tracker_id
+        required: true
+        type: string
+      - description: Resource UUID (empty to unassign)
+        in: path
+        name: resource_id
+        type: string
+      responses:
+        "200":
+          description: Assignment updated successfully
+        "400":
+          description: Invalid tracker or resource ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Tracker or resource not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Resource already assigned to another tracker
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to update assignment
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Assign or unassign resource to tracker
+      tags:
+      - trackers
+  /tracker/rename/{tracker_id}:
+    post:
+      consumes:
+      - application/json
+      description: Updates the display name of a tracker
+      parameters:
+      - description: Tracker UUID
+        in: path
+        name: tracker_id
+        required: true
+        type: string
+      - description: New tracker name
+        in: body
+        name: request
+        required: true
+        schema:
+          properties:
+            newName:
+              type: string
+          type: object
+      responses:
+        "200":
+          description: Tracker renamed successfully
+        "400":
+          description: Invalid tracker ID or request body
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to rename tracker
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Rename a tracker
+      tags:
+      - trackers
+swagger: "2.0"

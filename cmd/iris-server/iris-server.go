@@ -9,8 +9,15 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
+// @title IRIS-Server
+// @version 1.0
+// @description Tracker and MCP integration
+// @host 0.0.0.0:8080
+// @BasePath /
 func main() {
 	slog.Info(`
             ██╗██████╗ ██╗███████╗
@@ -53,9 +60,11 @@ Welcome to	╚═╝╚═╝  ╚═╝╚═╝╚══════╝`)
 }
 
 func registerHandlers(router *gin.Engine) {
+	handlers.MCPHandler(router)
+	handlers.SystemHandler(router)
 	handlers.TrackerHandler(router)
 	handlers.GatewayHandler(router)
 	handlers.ResourcesHandler(router)
-	handlers.MCPHandler(router)
-	handlers.SystemHandler(router)
+
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 }

@@ -20,7 +20,17 @@ func GatewayHandler(router *gin.Engine) {
 }
 
 // handleChirpstackWebhook handles incoming Chirpstack HTTP integration webhooks
-// POST /chirpstackGateway/data
+// @Summary Chirpstack webhook endpoint
+// @Description Receives uplink events from Chirpstack HTTP integration, parses tracker data, and updates database and MCP
+// @Tags gateway
+// @Accept json
+// @Produce json
+// @Param event query string true "Event type (must be 'up')"
+// @Param payload body object true "Chirpstack uplink event payload"
+// @Success 200 {object} map[string]string "Event processed successfully"
+// @Failure 400 {object} map[string]string "Unsupported event type, invalid JSON, or missing DevEUI"
+// @Failure 500 {object} map[string]string "Database or MCP update error"
+// @Router /chirpstackGateway/data [post]
 func handleChirpstackWebhook(c *gin.Context) {
 	eventType := c.Query("event")
 	if eventType != "up" {

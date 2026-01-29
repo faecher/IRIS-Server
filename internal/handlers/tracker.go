@@ -20,7 +20,13 @@ func TrackerHandler(router *gin.Engine) {
 }
 
 // listTrackers returns all trackers in the system
-// GET /tracker/
+// @Summary Get all trackers
+// @Description Returns a list of all trackers in the system with their current status, position, and assigned resources
+// @Tags trackers
+// @Produce json
+// @Success 200 {array} models.BaseTracker "List of trackers"
+// @Failure 500 {object} map[string]string "Failed to fetch trackers"
+// @Router /tracker/ [get]
 func listTrackers(c *gin.Context) {
 	trackers, err := repository.GetAllTrackers()
 	if err != nil {
@@ -32,7 +38,17 @@ func listTrackers(c *gin.Context) {
 }
 
 // assignResourceToTracker assigns or unassigns a resource to a tracker
-// POST /tracker/assign/{tracker_id}/{resource_id}
+// @Summary Assign or unassign resource to tracker
+// @Description Assigns a resource to a tracker or removes the assignment. Pass empty string for resource_id to unassign.
+// @Tags trackers
+// @Param tracker_id path string true "Tracker UUID"
+// @Param resource_id path string false "Resource UUID (empty to unassign)"
+// @Success 200 "Assignment updated successfully"
+// @Failure 400 {object} map[string]string "Invalid tracker or resource ID"
+// @Failure 404 {object} map[string]string "Tracker or resource not found"
+// @Failure 409 {object} map[string]string "Resource already assigned to another tracker"
+// @Failure 500 {object} map[string]string "Failed to update assignment"
+// @Router /tracker/assign/{tracker_id}/{resource_id} [post]
 func assignResourceToTracker(c *gin.Context) {
 	// parse tracker id
 	trackerID, err := uuid.FromString(c.Param("tracker_id"))
@@ -86,6 +102,17 @@ func assignResourceToTracker(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
+// renameTracker updates the display name of a tracker
+// @Summary Rename a tracker
+// @Description Updates the display name of a tracker
+// @Tags trackers
+// @Accept json
+// @Param tracker_id path string true "Tracker UUID"
+// @Param request body object{newName=string} true "New tracker name"
+// @Success 200 "Tracker renamed successfully"
+// @Failure 400 {object} map[string]string "Invalid tracker ID or request body"
+// @Failure 500 {object} map[string]string "Failed to rename tracker"
+// @Router /tracker/rename/{tracker_id} [post]
 func renameTracker(c *gin.Context) {
 	// parse tracker id
 	trackerID, err := uuid.FromString(c.Param("tracker_id"))

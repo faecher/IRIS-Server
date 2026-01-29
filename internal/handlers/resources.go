@@ -14,7 +14,13 @@ func ResourcesHandler(router *gin.Engine) {
 }
 
 // listResources returns all MCP resources
-// GET /resources/
+// @Summary Get all resources
+// @Description Returns a list of all resources from the MCP system
+// @Tags resources
+// @Produce json
+// @Success 200 {array} models.Resource "List of resources"
+// @Failure 500 {object} map[string]string "Failed to fetch resources"
+// @Router /resources/ [get]
 func listResources(c *gin.Context) {
 	resources, err := repository.GetAllResources()
 	if err != nil {
