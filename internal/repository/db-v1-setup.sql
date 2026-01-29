@@ -105,19 +105,17 @@ CREATE TRIGGER update_mcp_config_updated_at
 -- =============================================================================
 
 CREATE TABLE trackers_resource (
-    tracker_id uuid REFERENCES trackers(tracker_id) UNIQUE ON DELETE CASCADE,
-	resource_id uuid REFERENCES resources(resource_id) ON DELETE CASCADE,
-
-	PRIMARY KEY (tracker_id, resource_id),
+    tracker_id uuid PRIMARY KEY REFERENCES trackers(tracker_id) ON DELETE CASCADE,
+	resource_id uuid REFERENCES resources(resource_id) ON DELETE CASCADE
 );
 
 CREATE TABLE resource_marker (
-	resource_id uuid REFERENCES resources(resource_id) UNIQUE ON DELETE CASCADE,
+	resource_id uuid REFERENCES resources(resource_id) ON DELETE CASCADE,
 	marker_id uuid PRIMARY KEY,
 	siteplan_id uuid,
-);
 
-CREATE INDEX idx_resource_marker_siteplan ON resource_marker(siteplan_id);
+	UNIQUE (resource_id, siteplan_id)
+);
 
 -- =============================================================================
 -- VERSIONING SCHEMA

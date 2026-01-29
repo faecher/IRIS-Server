@@ -11,11 +11,14 @@ import (
 func GetMCPConfig() (models.MCPConfig, error) {
 	var config models.MCPConfig
 
-	SQL := `SELECT url, api_key, enabled FROM mcp_config`
+	SQL := `SELECT url, api_key, enabled, operation_id, siteplan_id FROM mcp_config`
 
 	err := DBConnPool.QueryRow(context.Background(), SQL).Scan(
 		&config.URL,
 		&config.APIKey,
+		&config.Enabled,
+		&config.OperationID,
+		&config.SiteplanID,
 	)
 	if err == pgx.ErrNoRows {
 		return models.MCPConfig{}, nil // No config found
@@ -28,18 +31,25 @@ func GetMCPConfig() (models.MCPConfig, error) {
 }
 
 func UpdateMCPConfig(newConfig models.MCPConfig) error {
-	// Use DELETE FROM (not DELETE *) and handle as singleton config
-	SQL := `DELETE FROM mcp_config;
-			INSERT INTO mcp_config (id, url, api_key, enabled) VALUES (1, $1, $2, $3)`
+	// Treat as singleton Config
+	SQL1 := `DELETE FROM mcp_config;`
+	SQL2 := `INSERT INTO mcp_config (id, url, api_key, enabled) VALUES (1, $1, $2, $3)`
 
-	_, err := DBConnPool.Exec(context.Background(), SQL, newConfig.URL, newConfig.APIKey, newConfig.Enabled)
+	_, err := DBConnPool.Exec(context.Background(), SQL1)
+	if err != nil {
+		return err
+	}
+
+	_, err = DBConnPool.Exec(context.Background(), SQL2, newConfig.URL, newConfig.APIKey, newConfig.Enabled)
 
 	return err
 }
 
 func UpdateMCPOperation(operationID uuid.UUID) error {
-	// Assuming mcp_config is a singleton table with id=1
-	SQL := `UPDATE mcp_config SET operation_id = $1 WHERE id = 1`
+	// Ensure mcp_config row exists, then update operation_id
+	SQL := `INSERT INTO mcp_config (id, url, api_key, enabled, operation_id) 
+	        VALUES (1, '', '', false, $1)
+	        ON CONFLICT (id) DO UPDATE SET operation_id = $1`
 
 	_, err := DBConnPool.Exec(context.Background(), SQL, operationID)
 
@@ -59,8 +69,10 @@ func GetMCPOperation() (uuid.UUID, error) {
 }
 
 func UpdateMCPSiteplan(siteplanID uuid.UUID) error {
-	// Assuming mcp_config is a singleton table with id=1
-	SQL := `UPDATE mcp_config SET siteplan_id = $1 WHERE id = 1`
+	// Ensure mcp_config row exists, then update siteplan_id
+	SQL := `INSERT INTO mcp_config (id, url, api_key, enabled, siteplan_id) 
+	        VALUES (1, '', '', false, $1)
+	        ON CONFLICT (id) DO UPDATE SET siteplan_id = $1`
 	_, err := DBConnPool.Exec(context.Background(), SQL, siteplanID)
 
 	return err

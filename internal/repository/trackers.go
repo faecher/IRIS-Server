@@ -47,15 +47,15 @@ func GetTrackerByDevEUI(devEUI string) (uuid.UUID, error) {
 // GetTrackerByID retrieves a single tracker by UUID
 func GetTrackerByID(trackerID uuid.UUID) (*models.BaseTracker, error) {
 	SQL := `
-		SELECT tracker_id, name, battery, position_longitude, position_latitude, updated_at, resource_id
+		SELECT trackers.tracker_id, name, battery, position_longitude, position_latitude, updated_at, tr.resource_id
 		FROM trackers
-		LEFT JOIN tracker_resources tr ON trackers.tracker_id = tr.tracker_id
-		WHERE tracker_id = $1
+		LEFT JOIN trackers_resource tr ON trackers.tracker_id = tr.tracker_id
+		WHERE trackers.tracker_id = $1
 	`
 
 	// get base tracker info
 	var tracker models.BaseTracker
-	var resourceID uuid.UUID
+	var resourceID *uuid.UUID
 	err := DBConnPool.QueryRow(context.Background(), SQL, trackerID).Scan(
 		&tracker.ID,
 		&tracker.Name,
@@ -69,9 +69,11 @@ func GetTrackerByID(trackerID uuid.UUID) (*models.BaseTracker, error) {
 		return nil, err
 	}
 
-	err = fillTrackerResource(&tracker, resourceID)
-	if err != nil {
-		return nil, err
+	if resourceID != nil {
+		err = fillTrackerResource(&tracker, *resourceID)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &tracker, nil
@@ -89,10 +91,11 @@ func GetAllTrackers() ([]models.Tracker, error) {
 			END as tracker_type,
 			ct.dev_eui,
 			tt.issi,
+			tr.resource_id
 		FROM trackers t
 		LEFT JOIN chirpstack_trackers ct ON t.tracker_id = ct.tracker_id
 		LEFT JOIN tetra_trackers tt ON t.tracker_id = tt.tracker_id
-		LEFT JOIN tracker_resources tr ON t.tracker_id = tr.tracker_id
+		LEFT JOIN trackers_resource tr ON t.tracker_id = tr.tracker_id
 		LEFT JOIN resources r ON tr.resource_id = r.resource_id
 	`
 
@@ -102,15 +105,26 @@ func GetAllTrackers() ([]models.Tracker, error) {
 	}
 	defer rows.Close()
 
-	var trackers []models.Tracker
+	trackers := make([]models.Tracker, 0)
 	for rows.Next() {
 		var base models.BaseTracker
 		var trackerType string
 		var devEUI, issi *string
+		var resourceID *uuid.UUID
 
-		rows.Scan(&base.ID, &base.Name, &base.Battery,
+		err = rows.Scan(&base.ID, &base.Name, &base.Battery,
 			&base.Position.Longitude, &base.Position.Latitude,
-			&base.LastUpdate, &trackerType, &devEUI, &issi)
+			&base.LastUpdate, &trackerType, &devEUI, &issi, &resourceID)
+		if err != nil {
+			return nil, err
+		}
+
+		if resourceID != nil {
+			err = fillTrackerResource(&base, *resourceID)
+			if err != nil {
+				return nil, err
+			}
+		}
 
 		switch trackerType {
 		case "chirpstack":
@@ -124,11 +138,6 @@ func GetAllTrackers() ([]models.Tracker, error) {
 				ISSI:        *issi,
 			})
 		}
-
-		err = fillTrackerResource(&base, base.AssignedResource)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	return trackers, nil
@@ -136,7 +145,7 @@ func GetAllTrackers() ([]models.Tracker, error) {
 
 func UpdateTrackerResource(trackerID, resourceID uuid.UUID) error {
 	SQL := `
-		INSERT INTO tracker_resources (tracker_id, resource_id)
+		INSERT INTO trackers_resource (tracker_id, resource_id)
 		VALUES ($1, $2)
 		ON CONFLICT (tracker_id) DO UPDATE SET resource_id = EXCLUDED.resource_id
 	`
@@ -146,7 +155,7 @@ func UpdateTrackerResource(trackerID, resourceID uuid.UUID) error {
 }
 
 func RemoveTrackerAssignment(trackerID uuid.UUID) error {
-	SQL := `DELETE FROM tracker_resources WHERE tracker_id = $1`
+	SQL := `DELETE FROM trackers_resource WHERE tracker_id = $1`
 
 	_, err := DBConnPool.Exec(context.Background(), SQL, trackerID)
 	return err
@@ -172,7 +181,7 @@ func UpdateTracker(tracker models.BaseTracker) error {
 	WHERE tracker_id = $2`
 
 	batteryUpdate := tracker.Battery >= 0
-	locationUpdate := !math.IsInf(tracker.Position.Latitude, -1) && !math.IsInf(tracker.Position.Longitude, -1)
+	locationUpdate := !math.IsInf(tracker.Position.Latitude, 0) && !math.IsInf(tracker.Position.Longitude, 0)
 
 	if !batteryUpdate && !locationUpdate {
 		return ErrNoDataToSave

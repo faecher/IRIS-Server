@@ -53,7 +53,7 @@ func ConnectAndInitDatabase(config config.SQLConfig) error {
 		return nil
 	}
 
-	err, _ = checkDBVersionAndInit(conn, false)
+	err, _ = CheckDBVersionAndInit(conn, false)
 	if err != nil {
 		return fmt.Errorf("failed to check database version and initialize: %w", err)
 	}
@@ -62,9 +62,10 @@ func ConnectAndInitDatabase(config config.SQLConfig) error {
 	return nil
 }
 
-// checkDBVersionAndInit checks the DB version and runs the init script if the db doesnt have a version.
+// CheckDBVersionAndInit checks the DB version and runs the init script if the db doesnt have a version.
 // Returns an error and bool = true if the db has been freshly initialized.
-func checkDBVersionAndInit(conn *pgxpool.Pool, skipInit bool) (error, bool) {
+// Exported for testing purposes.
+func CheckDBVersionAndInit(conn *pgxpool.Pool, skipInit bool) (error, bool) {
 	slog.Info("Checking database version...")
 	var version int
 
@@ -86,7 +87,7 @@ func checkDBVersionAndInit(conn *pgxpool.Pool, skipInit bool) (error, bool) {
 		if err != nil {
 			return fmt.Errorf("failed to initialize database: %w", err), false
 		}
-		err, _ = checkDBVersionAndInit(conn, true)
+		err, _ = CheckDBVersionAndInit(conn, true)
 		return err, true
 
 	case version == currentDatabaseVersion:
