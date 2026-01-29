@@ -21,13 +21,12 @@ type Position struct {
 
 // BaseTracker contains common fields for all tracker types
 type BaseTracker struct {
-	Position         `json:"position"`
-	Resource         `json:"resource"`
-	ID               uuid.UUID `json:"id" db:"tracker_id"`
-	AssignedResource uuid.UUID `json:"resourceId" db:"resource_id"`
-	Name             string    `json:"name" db:"name"`
-	Battery          int16     `json:"battery" db:"battery"`
-	LastUpdate       time.Time `json:"lastUpdate" db:"updated_at"`
+	Position   `json:"position"`
+	Resource   `json:"resource"`
+	ID         uuid.UUID `json:"id" db:"tracker_id"`
+	Name       string    `json:"name" db:"name"`
+	Battery    int16     `json:"battery" db:"battery"`
+	LastUpdate time.Time `json:"lastUpdate" db:"updated_at"`
 }
 
 // GetPosition returns the tracker's GPS position
