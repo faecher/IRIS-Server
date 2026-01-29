@@ -1,9 +1,27 @@
-FROM python:3.11-slim
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade -r requirements.txt
-COPY . .
+# Stage 1: Build
+FROM golang:1.25.1-alpine AS builder
+WORKDIR /build
+COPY go.mod go.sum ./
+RUN go mod download
 
-ENV PORT=8000
-EXPOSE ${PORT}
-CMD ["fastapi", "run", "/app/tracking/__init__.py", "--port", "${PORT}"]
+COPY . .
+RUN CGO_ENABLED=0 go build \
+	-ldflags="-w -s" \
+	-o iris-server ./cmd/iris-server
+
+
+
+# Stage 2: Runtime
+FROM alpine:latest AS runner
+RUN apk add --no-cache ca-certificates tzdata
+
+WORKDIR /build
+
+COPY --from=builder /build/iris-server .
+
+RUN adduser -D -u 1000 iris
+RUN chown -R iris:iris /build
+USER iris
+
+EXPOSE 8080
+CMD ["./iris-server"]
