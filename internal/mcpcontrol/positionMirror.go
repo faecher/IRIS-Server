@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 
 	"github.com/gofrs/uuid/v5"
@@ -16,10 +17,10 @@ import (
 // ErrMCPRequestFailed indicates that an HTTP request to the MCP server failed
 var ErrMCPRequestFailed = errors.New("MCP request failed")
 
-// UpdateTrackerInMCP sends the updated tracker information to the MCP system.
+// UpdateMarkerInMCP sends the updated tracker information to the MCP system.
 // This is done by identifying the resource the tracker belongs to and updating its position marker in MCP.
 // If no resource is found, no action is taken.
-func UpdateTrackerInMCP(trackerID uuid.UUID) error {
+func UpdateMarkerInMCP(trackerID uuid.UUID) error {
 	tracker, err := repository.GetTrackerByID(trackerID)
 	if err != nil {
 		return fmt.Errorf("failed to get tracker: %w", err)
@@ -76,7 +77,9 @@ func createNewMarkerInMCP(body io.ReadCloser, tracker *models.BaseTracker) error
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusCreated {
+		respBody, _ := io.ReadAll(resp.Body)
+		slog.Error("MCP marker creation failed", "status", resp.Status, "respBody", string(respBody))
 		return ErrMCPRequestFailed
 	}
 

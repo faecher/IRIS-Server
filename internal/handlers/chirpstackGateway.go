@@ -7,6 +7,7 @@ import (
 	"IRIS-Server/internal/repository"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math"
 	"net/http"
 
@@ -69,9 +70,10 @@ func handleChirpstackWebhook(c *gin.Context) {
 		return
 	}
 
-	err = mcpcontrol.UpdateTrackerInMCP(tracker.ID)
+	err = mcpcontrol.UpdateMarkerInMCP(tracker.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update tracker in MCP: " + err.Error()})
+		slog.Error("Failed to update tracker marker in MCP", "trackerID", tracker.ID, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update tracker marker in MCP: " + err.Error()})
 		return
 	}
 

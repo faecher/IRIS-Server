@@ -4,6 +4,7 @@ package mcpcontrol
 import (
 	"IRIS-Server/internal/models"
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
@@ -14,6 +15,11 @@ import (
 var (
 	mcpClient = &http.Client{
 		Timeout: 10 * time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true, // WARNING: Disables certificate verification (TODO: make configurable)
+			},
+		},
 	}
 
 	// MCPConfig holds the configuration for MCP integration
@@ -39,6 +45,7 @@ func mcpRequest(method, endpoint string, body io.ReadCloser) (*http.Response, er
 
 	req.Header.Set("Api-Key", MCPConfig.APIKey)
 	req.Header.Set("Accept", "*/*")
+	req.Header.Set("Content-Type", "application/json")
 
 	req.Body = body
 

@@ -5,6 +5,7 @@ import (
 	"IRIS-Server/internal/models"
 	"IRIS-Server/internal/repository"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"slices"
 	"strings"
@@ -96,6 +97,7 @@ func setMCPOperation(c *gin.Context) {
 func getMCPSiteplans(c *gin.Context) {
 	siteplans, err := mcpcontrol.GetMCPSiteplans()
 	if err != nil {
+		slog.Error("Failed to fetch MCP siteplans", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch MCP siteplans: " + err.Error()})
 		return
 	}
@@ -184,6 +186,12 @@ func startMCPIntegration(c *gin.Context) {
 
 	// update local MCPConfig variable only if DB update was successful
 	mcpcontrol.MCPConfig = config
+
+	err = mcpcontrol.UpdateMCPResourcesInDB()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update MCP resources: " + err.Error()})
+		return
+	}
 
 	c.Status(http.StatusOK)
 }

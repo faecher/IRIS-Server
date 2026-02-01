@@ -85,3 +85,20 @@ func GetResourceMarker(resourceID uuid.UUID) (models.ResourceMarker, error) {
 
 	return marker, nil
 }
+
+func UpsertResource(resource *models.Resource) error {
+	SQL := `INSERT INTO resources (resource_id, name, type, status) 
+	VALUES ($1, $2, $3, $4) ON CONFLICT (resource_id) DO UPDATE SET name = EXCLUDED.name, type = EXCLUDED.type, status = EXCLUDED.status`
+
+	_, err := DBConnPool.Exec(context.Background(), SQL,
+		resource.ID,
+		resource.Name,
+		resource.Type,
+		resource.Status,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to upsert resource: %w", err)
+	}
+
+	return nil
+}

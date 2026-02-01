@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 
 	"github.com/gofrs/uuid/v5"
@@ -55,7 +56,7 @@ func GetMCPSiteplans() ([]models.MCPSiteplan, error) {
 		return nil, fmt.Errorf("failed to get MCP operation: %w", err)
 	}
 
-	placeID, err := getMCPPlaceFromOrg(operationID)
+	placeID, err := getMCPPlaceFromOperation(operationID)
 	if errors.Is(err, ErrNoPlaceAssociated) {
 		return nil, ErrNoPlaceAssociated
 	} else if err != nil {
@@ -86,14 +87,15 @@ func GetMCPSiteplans() ([]models.MCPSiteplan, error) {
 	return siteplans, nil
 }
 
-func getMCPPlaceFromOrg(orgID uuid.UUID) (uuid.UUID, error) {
-	resp, err := mcpRequest("GET", "/api/organizations/"+orgID.String(), nil)
+func getMCPPlaceFromOperation(operationID uuid.UUID) (uuid.UUID, error) {
+	resp, err := mcpRequest("GET", "/api/operations/"+operationID.String(), nil)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("failed to request MCP organization: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		slog.Error("MCP organization request failed", "status", resp.Status, "resp", resp.Body)
 		return uuid.Nil, ErrMCPRequestFailed
 	}
 
@@ -113,4 +115,29 @@ func getMCPPlaceFromOrg(orgID uuid.UUID) (uuid.UUID, error) {
 	}
 
 	return operation.Place.ID, nil
+}
+
+func getMCPResources() ([]models.Resource, error) {
+	resp, err := mcpRequest("GET", "/api/resources", nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to request MCP resources: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, ErrMCPRequestFailed
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read MCP resources response: %w", err)
+	}
+
+	var resources []models.Resource
+	err = json.Unmarshal(body, &resources)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal MCP resources: %w", err)
+	}
+
+	return resources, nil
 }

@@ -5,14 +5,15 @@ import (
 	"fmt"
 
 	"github.com/caarlos0/env/v10"
+	"github.com/joho/godotenv"
 )
 
 // MCPConfig holds the configuration for MCP integration
-type MCPConfig struct {
-	ServerURL    string `env:"MCP_SERVER_URL"`
-	APIToken     string `env:"MCP_API_TOKEN"`
-	OperationUID string `env:"MCP_OPERATION_UID"`
-}
+// type MCPConfig struct {
+// 	ServerURL    string `env:"MCP_SERVER_URL"`
+// 	APIToken     string `env:"MCP_API_TOKEN"`
+// 	OperationUID string `env:"MCP_OPERATION_UID"`
+// }
 
 // SQLConfig holds the database configuration
 type SQLConfig struct {
@@ -42,7 +43,7 @@ type WebServerConfig struct {
 
 // Config is the main configuration struct
 type Config struct {
-	MCP    MCPConfig
+	// MCP    MCPConfig
 	SQL    SQLConfig
 	Server WebServerConfig
 	// Sentry SentryConfig
@@ -50,6 +51,9 @@ type Config struct {
 
 // Load reads environment variables and populates the Config struct
 func Load() (*Config, error) {
+	// Load .env file if it exists (silently ignore if not found)
+	_ = godotenv.Load()
+
 	cfg := &Config{}
 	err := env.Parse(cfg)
 	if err != nil {

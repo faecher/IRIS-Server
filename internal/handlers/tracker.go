@@ -59,7 +59,7 @@ func assignResourceToTracker(c *gin.Context) {
 	// test if tracker exists
 	_, err = repository.GetTrackerByID(trackerID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Tracker not found"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Tracker not found"})
 		return
 	}
 
@@ -80,7 +80,7 @@ func assignResourceToTracker(c *gin.Context) {
 	} else {
 		_, err = repository.GetResourceByID(resourceID)
 		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Resource not found"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Resource not found"})
 			return
 		}
 

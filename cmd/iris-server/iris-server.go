@@ -27,7 +27,7 @@ func main() {
             ██║██████╔╝██║███████╗
             ██║██╔══██╗██║╚════██║
             ██║██║  ██║██║███████║
-Welcome to	╚═╝╚═╝  ╚═╝╚═╝╚══════╝`)
+Welcome to  ╚═╝╚═╝  ╚═╝╚═╝╚══════╝`)
 	slog.Info("Starting IRIS Server...")
 
 	slog.Info("Loading configuration...")
@@ -47,6 +47,8 @@ Welcome to	╚═╝╚═╝  ╚═╝╚═╝╚══════╝`)
 
 	// If you need goroutines for background tasks, such as tracker polling, start them here.
 	// TODO: sync resources in mcp to registered resources in db
+	// TODO: auto-load mcp config from db
+	// TODO: handle tracker update when no resource is assigned -> currently errors
 
 	slog.Info("Starting web server on " + cfg.Server.Address + "...")
 
