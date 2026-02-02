@@ -232,11 +232,11 @@ func fillTrackerResource(tracker *models.BaseTracker, resourceID uuid.UUID) erro
 	}
 
 	resource, err := GetResourceByID(resourceID)
-	if err != nil {
+	if err != nil && !errors.Is(err, ErrNoResourceFound) {
 		return fmt.Errorf("failed to get resource by ID: %w", err)
 	}
 
-	tracker.Resource = *resource
+	tracker.Resource = resource
 
 	return nil
 }

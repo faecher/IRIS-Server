@@ -22,7 +22,8 @@ type Position struct {
 // BaseTracker contains common fields for all tracker types
 type BaseTracker struct {
 	Position `json:"position"`
-	Resource `json:"resource"`
+
+	Resource *Resource `json:"resource"`
 
 	ID         uuid.UUID `db:"tracker_id" json:"id"`
 	Name       string    `db:"name"       json:"name"`

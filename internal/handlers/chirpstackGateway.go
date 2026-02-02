@@ -70,6 +70,21 @@ func handleChirpstackWebhook(c *gin.Context) {
 		return
 	}
 
+	// Skip update if a resource is assigned
+	trackerData, err := repository.GetTrackerByID(tracker.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get tracker: " + err.Error()})
+		return
+	}
+
+	if trackerData.Resource == nil {
+		// No resource assigned, skip MCP update
+		c.JSON(http.StatusOK, gin.H{"status": "success", "note": "no resource assigned, MCP update skipped"})
+		return
+	}
+
+	// Resource assigned, proceed with MCP update
+	// Update tracker marker in MCP
 	err = mcpcontrol.UpdateMarkerInMCP(tracker.ID)
 	if err != nil {
 		slog.Error("Failed to update tracker marker in MCP", "trackerID", tracker.ID, "error", err)

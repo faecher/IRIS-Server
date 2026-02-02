@@ -76,7 +76,6 @@ Welcome to  ╚═╝╚═╝  ╚═╝╚═╝╚══════╝`)
 
 	// If you need goroutines for background tasks, such as tracker polling,
 	// start them here just like the MCP resource sync above. You can reuse the provided context.
-	// TODO: handle tracker update when no resource is assigned -> currently errors
 }
 
 func registerHandlers(router *gin.Engine) {

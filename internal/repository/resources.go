@@ -10,6 +10,8 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+var ErrNoResourceFound = errors.New("no resource found")
+
 // GetAllResources retrieves all resources from the database
 func GetAllResources() ([]models.Resource, error) {
 	SQL := `SELECT resource_id, name, type, status
@@ -42,6 +44,9 @@ func GetResourceByID(resourceID uuid.UUID) (*models.Resource, error) {
 		&resource.Type,
 		&resource.Status,
 	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrNoResourceFound
+	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to query resource by ID: %w", err)
 	}
