@@ -47,6 +47,6 @@ func CreateChirpstackTracker(tracker *models.ChirpstackTracker) error {
 // CreateTetraTracker creates a new Tetra tracker record in the database
 func CreateTetraTracker(tracker *models.TetraTracker) error {
 	_ = tracker
-	// TODO
+
 	return nil
 }

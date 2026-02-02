@@ -63,7 +63,6 @@ func getSystemStatus(c *gin.Context) {
 // @Success 200 {object} object{version=string} "Application version"
 // @Router /system/version [get]
 func getSystemVersion(c *gin.Context) {
-	// TODO: Read version from build-time variable or config
 	// currently there is no versioning system yet. Return "beta" for now.
 
 	c.JSON(http.StatusOK, gin.H{"version": "beta"})

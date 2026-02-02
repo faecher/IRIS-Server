@@ -38,7 +38,7 @@ func UpdateMarkerInMCP(trackerID uuid.UUID) error {
 			"lng": tracker.Position.Longitude,
 		},
 		"id":         marker.MarkerID,
-		"icon":       "BASIC_PIN", // TODO: what icon to use here? read from resource type?
+		"icon":       "BASIC_PIN",
 		"entityType": "TEMPLATE",
 		"siteplanId": marker.SiteplanID,
 	}
