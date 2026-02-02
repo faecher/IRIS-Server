@@ -86,6 +86,7 @@ func GetResourceMarker(resourceID uuid.UUID) (models.ResourceMarker, error) {
 	return marker, nil
 }
 
+// UpsertResource creates or updates a resource in the database
 func UpsertResource(resource *models.Resource) error {
 	SQL := `INSERT INTO resources (resource_id, name, type, status) 
 	VALUES ($1, $2, $3, $4) ON CONFLICT (resource_id) DO UPDATE SET name = EXCLUDED.name, type = EXCLUDED.type, status = EXCLUDED.status`

@@ -5,6 +5,7 @@ import (
 	"fmt"
 )
 
+// UpdateMCPResourcesInDB fetches resources from the MCP system and updates/inserts them into the local database
 func UpdateMCPResourcesInDB() error {
 	resources, err := getMCPResources()
 	if err != nil {

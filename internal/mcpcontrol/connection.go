@@ -5,6 +5,7 @@ import (
 	"net/http"
 )
 
+// ErrMCPConnectionFailed indicates that the connection test to the MCP system failed
 var ErrMCPConnectionFailed = fmt.Errorf("MCP connection failed")
 
 // TestMCPConnection checks connectivity to the MCP system by requesting its version endpoint.
