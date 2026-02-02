@@ -42,6 +42,10 @@ Welcome to  ╚═╝╚═╝  ╚═╝╚═╝╚══════╝`)
 		return
 	}
 
+	// Load mcp config from db
+	loadAndInitMCP()
+
+	// Start Webserver
 	router := gin.Default()
 	registerHandlers(router)
 
