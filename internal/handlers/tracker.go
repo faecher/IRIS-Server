@@ -136,7 +136,7 @@ func assignOrUnassignResourceToTracker(resourceID, trackerID uuid.UUID, c *gin.C
 	_, err := repository.GetResourceByID(resourceID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Resource not found"})
-		return true, fmt.Errorf("resouce not found: %w", err)
+		return true, fmt.Errorf("resource not found: %w", err)
 	}
 
 	err = repository.UpdateTrackerResource(trackerID, resourceID)
