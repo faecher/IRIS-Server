@@ -65,7 +65,7 @@ func assignResourceToTracker(c *gin.Context) {
 
 	// parse resource id
 	resourceID, err := uuid.FromString(c.Param("resource_id"))
-	if err != nil && c.Param("resource_id") != "" {
+	if err != nil && c.Param("resource_id") == "" {
 		// no resource id provided, unassign resource
 		resourceID = uuid.Nil
 	} else if err != nil {
