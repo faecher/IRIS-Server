@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+// ErrNoResourceFound indicates that no resource was found for the given criteria
 var ErrNoResourceFound = errors.New("no resource found")
 
 // GetAllResources retrieves all resources from the database
