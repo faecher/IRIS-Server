@@ -106,7 +106,10 @@ func loadAndInitMCP() {
 			slog.Error("MCP connection test failed. Disabling MCP client.", "error", err)
 
 			mcpcontrol.MCPConfig.Enabled = false
-			repository.UpdateMCPConfig(mcpcontrol.MCPConfig)
+			err := repository.UpdateMCPConfig(mcpcontrol.MCPConfig)
+			if err != nil {
+				slog.Error("Failed to update MCP configuration in database:", "error", err)
+			}
 		} else {
 			slog.Info("MCP connection successful.")
 		}

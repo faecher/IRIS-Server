@@ -3,6 +3,7 @@ package mcpcontrol
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 )
 
@@ -18,7 +19,8 @@ func TestMCPConnection() error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("%w: "+resp.Status, ErrMCPConnectionFailed)
+		slog.Error("MCP connection test failed", "status", resp.Status)
+		return fmt.Errorf("%w: %s", ErrMCPConnectionFailed, resp.Status)
 	}
 
 	return nil
