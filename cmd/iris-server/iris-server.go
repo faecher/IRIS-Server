@@ -4,7 +4,9 @@ package main
 import (
 	"IRIS-Server/internal/config"
 	"IRIS-Server/internal/handlers"
+	"IRIS-Server/internal/mcpcontrol"
 	"IRIS-Server/internal/repository"
+	"context"
 	"log"
 	"log/slog"
 	"net/http"
@@ -49,11 +51,6 @@ Welcome to  ╚═╝╚═╝  ╚═╝╚═╝╚══════╝`)
 	router := gin.Default()
 	registerHandlers(router)
 
-	// If you need goroutines for background tasks, such as tracker polling, start them here.
-	// TODO: sync resources in mcp to registered resources in db
-	// TODO: auto-load mcp config from db
-	// TODO: handle tracker update when no resource is assigned -> currently errors
-
 	slog.Info("Starting web server on " + cfg.Server.Address + "...")
 
 	server := &http.Server{
@@ -69,6 +66,16 @@ Welcome to  ╚═╝╚═╝  ╚═╝╚═╝╚══════╝`)
 	if err != nil {
 		slog.Error("Server failed:", "error", err)
 	}
+
+	// MCP Resource Sync Goroutine
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go syncResources(ctx)
+
+	// If you need goroutines for background tasks, such as tracker polling,
+	// start them here just like the MCP resource sync above. You can reuse the provided context.
+	// TODO: handle tracker update when no resource is assigned -> currently errors
 }
 
 func registerHandlers(router *gin.Engine) {
@@ -79,4 +86,47 @@ func registerHandlers(router *gin.Engine) {
 	handlers.ResourcesHandler(router)
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+}
+
+// loadAndInitMCP loads MCP configuration from the database and initializes the MCP client.
+// If the configuration is incomplete or the connection test fails, it disables the MCP client.
+func loadAndInitMCP() {
+	mcpConfig, err := repository.GetMCPConfig()
+	if err != nil {
+		slog.Error("Failed to load MCP configuration from database:", "error", err)
+		return
+	}
+
+	if mcpConfig.URL != "" && mcpConfig.APIKey != "" {
+		slog.Info("MCP configuration found in database, initializing MCP client...")
+		mcpcontrol.MCPConfig = mcpConfig
+
+		err = mcpcontrol.TestMCPConnection()
+		if err != nil {
+			slog.Error("MCP connection test failed. Disabling MCP client.", "error", err)
+
+			mcpcontrol.MCPConfig.Enabled = false
+			repository.UpdateMCPConfig(mcpcontrol.MCPConfig)
+		} else {
+			slog.Info("MCP connection successful.")
+		}
+	}
+}
+
+// nolint: contextcheck
+func syncResources(ctx context.Context) {
+	ticker := time.NewTicker(30 * time.Second) // TODO: make interval configurable
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			err := mcpcontrol.UpdateMCPResourcesInDB()
+			if err != nil {
+				slog.Error("Failed to sync MCP resources:", "error", err)
+			}
+		case <-ctx.Done():
+			return
+		}
+	}
 }
