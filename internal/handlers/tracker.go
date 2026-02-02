@@ -3,6 +3,7 @@ package handlers
 import (
 	"IRIS-Server/internal/repository"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -75,21 +76,9 @@ func assignResourceToTracker(c *gin.Context) {
 	}
 
 	// assign or unassign resource
-	if resourceID == uuid.Nil {
-		err = repository.RemoveTrackerAssignment(trackerID)
-	} else {
-		_, err = repository.GetResourceByID(resourceID)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Resource not found"})
-			return
-		}
-
-		err = repository.UpdateTrackerResource(trackerID, resourceID)
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" { // unique_violation
-			c.JSON(http.StatusConflict, gin.H{"error": "Resource is already assigned to another tracker"})
-			return
-		}
+	alreadyResponded, err := assignOrUnassignResourceToTracker(resourceID, trackerID, c)
+	if alreadyResponded {
+		return
 	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update tracker resource assignment"})
@@ -134,4 +123,28 @@ func renameTracker(c *gin.Context) {
 	}
 
 	c.Status(http.StatusOK)
+}
+
+// assignOrUnassignResourceToTracker assigns or unassigns a resource to a tracker based on the provided IDs.
+// returns an error, and wether it has already responded to the client
+func assignOrUnassignResourceToTracker(resourceID, trackerID uuid.UUID, c *gin.Context) (bool, error) {
+	if resourceID == uuid.Nil {
+		err := repository.RemoveTrackerAssignment(trackerID)
+		return false, fmt.Errorf("failed to remove tracker: %w", err)
+	} else {
+		_, err := repository.GetResourceByID(resourceID)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Resource not found"})
+			return true, fmt.Errorf("resouce not found: %w", err)
+		}
+
+		err = repository.UpdateTrackerResource(trackerID, resourceID)
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" { // unique_violation
+			c.JSON(http.StatusConflict, gin.H{"error": "Resource is already assigned to another tracker"})
+			return true, fmt.Errorf("resource is already assigned: %w", err)
+		}
+	}
+
+	return false, nil
 }
