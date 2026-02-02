@@ -1,4 +1,4 @@
-# Addition of new Trackers
+# Addition of new Tracker Technologies
 
 If you want to implement new tracker types and technologies, you mainly need to follow these three steps:
 
