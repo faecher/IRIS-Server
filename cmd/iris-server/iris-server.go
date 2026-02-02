@@ -113,7 +113,7 @@ func loadAndInitMCP() {
 	}
 }
 
-// nolint: contextcheck
+//nolint:contextcheck
 func syncResources(ctx context.Context) {
 	ticker := time.NewTicker(30 * time.Second) // TODO: make interval configurable
 	defer ticker.Stop()
