@@ -2,9 +2,9 @@
 package mcpcontrol
 
 import (
+	"IRIS-Server/internal/config"
 	"IRIS-Server/internal/models"
 	"context"
-	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
@@ -14,12 +14,7 @@ import (
 
 var (
 	mcpClient = &http.Client{
-		Timeout: 10 * time.Second,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true, // WARNING: Disables certificate verification (TODO: make configurable)
-			},
-		},
+		Transport: &http.Transport{},
 	}
 
 	// MCPConfig holds the configuration for MCP integration
@@ -28,6 +23,16 @@ var (
 	// ErrMCPDisabled indicates that MCP integration is disabled
 	ErrMCPDisabled = errors.New("MCP integration is disabled")
 )
+
+// InitMCPClient initializes the MCP HTTP client with the given configuration.
+func InitMCPClient(config config.MCPConfig) {
+	clientTransport, ok := mcpClient.Transport.(*http.Transport)
+	if ok {
+		clientTransport.TLSClientConfig.InsecureSkipVerify = !config.EnableSSLVerification
+	}
+
+	mcpClient.Timeout = time.Duration(config.RequestTimeout) * time.Second
+}
 
 // mcpRequest performs an HTTP request to the MCP server
 // with the given method, endpoint, and body.
