@@ -139,6 +139,7 @@ func TestGetTrackerByID(t *testing.T) {
 		tracker, err := repository.GetTrackerByID(trackerID)
 		require.NoError(t, err)
 		assert.NotNil(t, tracker)
+		require.NotNil(t, tracker.Resource)
 		assert.Equal(t, resourceID, tracker.Resource.ID)
 		assert.Equal(t, "Test Resource", tracker.Resource.Name)
 	})
@@ -150,7 +151,7 @@ func TestGetTrackerByID(t *testing.T) {
 		tracker, err := repository.GetTrackerByID(trackerID)
 		require.NoError(t, err)
 		assert.NotNil(t, tracker)
-		assert.Equal(t, uuid.Nil, tracker.Resource.ID)
+		assert.Nil(t, tracker.Resource)
 	})
 
 	t.Run("tracker with zero battery", func(t *testing.T) {
@@ -220,6 +221,7 @@ func TestUpdateTrackerResource(t *testing.T) {
 
 		tracker, err := repository.GetTrackerByID(trackerID)
 		require.NoError(t, err)
+		require.NotNil(t, tracker.Resource)
 		assert.Equal(t, resourceID, tracker.Resource.ID)
 	})
 
@@ -240,6 +242,7 @@ func TestUpdateTrackerResource(t *testing.T) {
 
 		tracker, err := repository.GetTrackerByID(trackerID)
 		require.NoError(t, err)
+		require.NotNil(t, tracker.Resource)
 		assert.Equal(t, resource2, tracker.Resource.ID)
 	})
 
@@ -312,7 +315,7 @@ func TestRemoveTrackerAssignment(t *testing.T) {
 
 		tracker, err := repository.GetTrackerByID(trackerID)
 		require.NoError(t, err)
-		assert.Equal(t, uuid.Nil, tracker.Resource.ID)
+		assert.Nil(t, tracker.Resource)
 	})
 
 	t.Run("remove non-existent assignment succeeds", func(t *testing.T) {
