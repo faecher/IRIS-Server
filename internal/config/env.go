@@ -8,12 +8,16 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// MCPConfig holds the configuration for MCP integration
-// type MCPConfig struct {
-// 	ServerURL    string `env:"MCP_SERVER_URL"`
-// 	APIToken     string `env:"MCP_API_TOKEN"`
-// 	OperationUID string `env:"MCP_OPERATION_UID"`
-// }
+// UpdateConfig holds the configuration for periodic updates
+type UpdateConfig struct {
+	ResourceUpdate uint16 `env:"MCP_RESOURCE_UPDATE" envDefault:"5"` // in seconds
+}
+
+// MCPConfig holds the MCP integration configuration
+type MCPConfig struct {
+	EnableSSLVerification bool `env:"MCP_ENABLE_SSL_VERIFICATION" envDefault:"true"`
+	RequestTimeout        int  `env:"MCP_TIMEOUT"                 envDefault:"10"` // in seconds
+}
 
 // SQLConfig holds the database configuration
 type SQLConfig struct {
@@ -35,18 +39,12 @@ type WebServerConfig struct {
 	MaxHeaderBytes int `env:"SERVER_MAX_HEADER_BYTES" envDefault:"1048576"` // 1 MB default
 }
 
-// SentryConfig holds the configuration for Sentry error tracking
-// type SentryConfig struct {
-// 	DSN         string `env:"SENTRY_DSN"`
-// 	Environment string `env:"SENTRY_ENVIRONMENT" envDefault:"production"`
-// }
-
 // Config is the main configuration struct
 type Config struct {
-	// MCP    MCPConfig
+	Update UpdateConfig
+	MCP    MCPConfig
 	SQL    SQLConfig
 	Server WebServerConfig
-	// Sentry SentryConfig
 }
 
 // Load reads environment variables and populates the Config struct

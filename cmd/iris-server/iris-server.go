@@ -45,6 +45,7 @@ Welcome to  ╚═╝╚═╝  ╚═╝╚═╝╚══════╝`)
 	}
 
 	// Load mcp config from db
+	mcpcontrol.InitMCPClient(cfg.MCP)
 	loadAndInitMCP()
 
 	// Start Webserver
@@ -71,7 +72,7 @@ Welcome to  ╚═╝╚═╝  ╚═╝╚═╝╚══════╝`)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go syncResources(ctx)
+	go syncResources(ctx, cfg.Update.ResourceUpdate)
 
 	// If you need goroutines for background tasks, such as tracker polling,
 	// start them here just like the MCP resource sync above. You can reuse the provided context.
@@ -116,9 +117,12 @@ func loadAndInitMCP() {
 	}
 }
 
+// syncResources periodically updates MCP resources in the database.
+// interval is specified in seconds.
+//
 //nolint:contextcheck
-func syncResources(ctx context.Context) {
-	ticker := time.NewTicker(30 * time.Second) // TODO: make interval configurable
+func syncResources(ctx context.Context, interval uint16) {
+	ticker := time.NewTicker(time.Duration(interval) * time.Second)
 	defer ticker.Stop()
 
 	for {
