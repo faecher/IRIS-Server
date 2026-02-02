@@ -131,19 +131,19 @@ func assignOrUnassignResourceToTracker(resourceID, trackerID uuid.UUID, c *gin.C
 	if resourceID == uuid.Nil {
 		err := repository.RemoveTrackerAssignment(trackerID)
 		return false, fmt.Errorf("failed to remove tracker: %w", err)
-	} else {
-		_, err := repository.GetResourceByID(resourceID)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Resource not found"})
-			return true, fmt.Errorf("resouce not found: %w", err)
-		}
+	}
 
-		err = repository.UpdateTrackerResource(trackerID, resourceID)
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" { // unique_violation
-			c.JSON(http.StatusConflict, gin.H{"error": "Resource is already assigned to another tracker"})
-			return true, fmt.Errorf("resource is already assigned: %w", err)
-		}
+	_, err := repository.GetResourceByID(resourceID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Resource not found"})
+		return true, fmt.Errorf("resouce not found: %w", err)
+	}
+
+	err = repository.UpdateTrackerResource(trackerID, resourceID)
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "23505" { // unique_violation
+		c.JSON(http.StatusConflict, gin.H{"error": "Resource is already assigned to another tracker"})
+		return true, fmt.Errorf("resource is already assigned: %w", err)
 	}
 
 	return false, nil
