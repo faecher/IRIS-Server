@@ -1,4 +1,5 @@
 // Package mcpcontrol provides functions to interact with the MCP (Medical Care Platform) system.
+// SPDX-License-Identifier: EUPL-1.2
 package mcpcontrol
 
 import (

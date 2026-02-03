@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: EUPL-1.2
+
 // Package main implements the entry point for the IRIS Server application.
 package main
 

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: EUPL-1.2
+
 // Package repository provides the data access layer for the IRIS application,
 // handling all database operations, connections, and SQL query execution.
 package repository

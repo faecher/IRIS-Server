@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: EUPL-1.2
+
 // Package handlers provides HTTP handlers for various system functionalities
 package handlers
 

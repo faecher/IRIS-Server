@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: EUPL-1.2
+
 // Package config provides functionality to load and manage application configuration from environment variables.
 package config
 

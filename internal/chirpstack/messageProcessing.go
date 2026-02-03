@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: EUPL-1.2
+
 // Package chirpstack provides utilities for processing messages from Chirpstack
 package chirpstack
 

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: EUPL-1.2
+
 package models
 
 // ChirpstackTracker represents a tracker device using Chirpstack LoRaWAN

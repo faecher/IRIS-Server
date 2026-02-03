@@ -1,4 +1,5 @@
 // Package models defines data models used throughout the application
+// SPDX-License-Identifier: EUPL-1.2
 package models
 
 import "github.com/gofrs/uuid/v5"
