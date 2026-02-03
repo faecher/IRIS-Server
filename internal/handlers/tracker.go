@@ -64,11 +64,14 @@ func assignResourceToTracker(c *gin.Context) {
 		return
 	}
 
-	// assign or unassign resource
-	alreadyResponded, err := assignOrUnassignResourceToTracker(resourceID, trackerID, c)
-	if alreadyResponded {
+	// assign resource
+	_, err = repository.GetResourceByID(resourceID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Resource not found"})
 		return
 	}
+
+	err = repository.UpdateTrackerResource(trackerID, resourceID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update tracker resource assignment"})
 		return
@@ -93,10 +96,7 @@ func unassignResourceFromTracker(c *gin.Context) {
 		return
 	}
 
-	alreadyResponded, err := assignOrUnassignResourceToTracker(uuid.Nil, trackerID, c)
-	if alreadyResponded {
-		return
-	}
+	err = repository.RemoveTrackerAssignment(trackerID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove tracker resource assignment"})
 		return
@@ -140,29 +140,6 @@ func renameTracker(c *gin.Context) {
 	}
 
 	c.Status(http.StatusOK)
-}
-
-// assignOrUnassignResourceToTracker assigns or unassigns a resource to a tracker based on the provided IDs.
-// returns an error, and wether it has already responded to the client
-func assignOrUnassignResourceToTracker(resourceID, trackerID uuid.UUID, c *gin.Context) (bool, error) {
-	if resourceID == uuid.Nil {
-		err := repository.RemoveTrackerAssignment(trackerID)
-		return false, fmt.Errorf("failed to remove tracker assignment: %w", err)
-	}
-
-	_, err := repository.GetResourceByID(resourceID)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Resource not found"})
-		return true, fmt.Errorf("resource not found: %w", err)
-	}
-
-	err = repository.UpdateTrackerResource(trackerID, resourceID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update tracker resource assignment"})
-		return true, fmt.Errorf("failed to update tracker resource assignment: %w", err)
-	}
-
-	return false, nil
 }
 
 func parseAndVerifyTrackerID(c *gin.Context) (uuid.UUID, error) {
