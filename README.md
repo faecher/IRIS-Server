@@ -27,5 +27,5 @@ In this repository, there will only be technical documentation about the backend
 
 ## Security
 > [!WARNING]
-> This project is not built with security in mind and does not feature any authentication for Web-Interface or API.
-> Please only use in private networks and do not expose your server to the internet.
+> This project is not built with security in mind and does not feature any built-in authentication or authorization for the web interface or API. Any user who can reach the service can read and modify tracker data and change server configuration.
+> Do **not** expose IRIS-Server directly to the internet or to any untrusted or shared network. If you deploy it, you **must** strictly gate access using strong external controls (for example, an authenticated reverse proxy, VPN, or mTLS) and treat the server as a fully trusted internal component only.
