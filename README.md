@@ -23,3 +23,9 @@ The [IRIS-Server](https://github.com/faecher/IRIS-Server) provides and relays th
 See [IRIS-Frontend](https://github.com/faecher/IRIS-Frontend) for detailed installation and usage documentation.
 
 In this repository, there will only be technical documentation about the backend to aid in development and expansion. The technical documentation for IRIS-Server can be found [here](./docs/wiki/README.md).
+
+
+## Security
+> [!WARNING]
+> This project is not built with security in mind and does not feature any authentication for Web-Interface or API.
+> Please only use in private networks and do not expose your server to the internet.
