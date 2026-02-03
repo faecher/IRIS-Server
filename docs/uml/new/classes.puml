@@ -7,7 +7,7 @@ package models {
 	interface Tracker {
 		GetPosition() Position
 		GetLastUpdate() DateTime
-		GetBattery() uint16
+		GetBattery() int16
 	}
 
 	struct Position {
@@ -19,7 +19,7 @@ package models {
 		+ Position
 		+ ID: UUID
 		+ Name: string
-		+ Battery: uint16
+		+ Battery: int16
 		+ LastUpdate: DateTime
 	}
 

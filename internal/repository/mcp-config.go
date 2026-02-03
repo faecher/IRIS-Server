@@ -16,7 +16,7 @@ import (
 func GetMCPConfig() (models.MCPConfig, error) {
 	var config models.MCPConfig
 
-	SQL := `SELECT url, api_key, enabled, operation_id, siteplan_id FROM mcp_config`
+	SQL := `SELECT url, api_key, enabled, operation_id, siteplan_id FROM mcp_config WHERE id = 1`
 
 	err := DBConnPool.QueryRow(context.Background(), SQL).Scan(
 		&config.URL,

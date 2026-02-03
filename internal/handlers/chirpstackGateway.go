@@ -72,7 +72,7 @@ func handleChirpstackWebhook(c *gin.Context) {
 		return
 	}
 
-	// Skip update if a resource is assigned
+	// Skip MCP update if no resource is assigned
 	trackerData, err := repository.GetTrackerByID(tracker.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get tracker: " + err.Error()})

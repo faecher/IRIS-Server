@@ -39,12 +39,12 @@ func listTrackers(c *gin.Context) {
 	c.JSON(http.StatusOK, trackers)
 }
 
-// assignResourceToTracker assigns or unassigns a resource to a tracker
-// @Summary Assign or unassign resource to tracker
-// @Description Assigns a resource to a tracker or removes the assignment. Pass empty string for resource_id to unassign.
+// assignResourceToTracker assigns a resource to a tracker
+// @Summary Assign a resource to tracker
+// @Description Assigns a resource to a tracker.
 // @Tags trackers
 // @Param tracker_id path string true "Tracker UUID"
-// @Param resource_id path string false "Resource UUID (empty to unassign)"
+// @Param resource_id path string true "Resource UUID"
 // @Success 200 "Assignment updated successfully"
 // @Failure 400 {object} map[string]string "Invalid tracker or resource ID"
 // @Failure 404 {object} map[string]string "Tracker or resource not found"

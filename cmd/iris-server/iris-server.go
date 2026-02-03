@@ -134,12 +134,22 @@ func loadAndInitMCP() {
 //
 //nolint:contextcheck
 func syncResources(ctx context.Context, interval uint16) {
+	if interval <= 0 {
+		slog.Info("MCP resource sync disabled (interval <= 0).")
+		return
+	}
+
 	ticker := time.NewTicker(time.Duration(interval) * time.Second)
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ticker.C:
+			if !mcpcontrol.MCPConfig.Enabled {
+				slog.Info("MCP integration is disabled. Skipping resource sync.")
+				continue
+			}
+
 			err := mcpcontrol.UpdateMCPResourcesInDB()
 			if err != nil {
 				slog.Error("Failed to sync MCP resources:", "error", err)

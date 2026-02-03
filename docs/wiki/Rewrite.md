@@ -40,7 +40,7 @@ Routes that exist in both Python and Go with the same path and method:
 
 #### MCP Configuration
 - **Python:** `GET /mcp/config` returns operation info with `operation_selected` and `operation` fields
-- **Go:** `GET /mcp/config` returns only basic config (enabled, api_key, url, selected operation and selected siteplan). The differenciation between operation and operation_selected got removed.
+- **Go:** `GET /mcp/config` returns only basic config (enabled, api_key, url, selected operation and selected siteplan). The differentiation between operation and operation_selected got removed.
 - **Reason:** Simpler design that only stores data that is necessary for IRIS functionality and queries needed data from MCP dynamically.
 
 ### 1.3 New Routes in Go
@@ -121,7 +121,7 @@ Operation enable/disable should be handled in MCP itself. We now only select an 
 #### Configuration Management
 - **Python:** `Settings` class loaded via Pydantic settings
 - **Go:** `Config` struct loaded via `caarlos0/env` with structured sub-configs from environment variables
-- **Benefit:** More granular organization (MCPConfig, SQLConfig, SentryConfig), config changable from docker-compose file
+- **Benefit:** More granular organization (MCPConfig, SQLConfig, SentryConfig), config changeable from docker-compose file
 
 ### 3.2 Chirpstack Message Handling
 
@@ -137,8 +137,8 @@ Operation enable/disable should be handled in MCP itself. We now only select an 
   - Background task via `get_mcp_data()` scheduled function
   - Updates resources from MCP tableau
 - **Go:**
-  - Direct HTTP client in `internal/mcp_control/positionMirror.go`
-  - `UpdateTrackerInMCP()` for pushing tracker positions to markers
+  - Direct HTTP client in `internal/mcpcontrol/positionMirror.go`
+  - `UpdateMarkerInMCP()` for pushing tracker positions to markers
   - **Multi-siteplan support:** Stores one marker ID per resource per siteplan in `resource_marker` table
   - Automatically uses currently selected siteplan from `mcp_config`
   - Creates new marker if none exists for resource+siteplan combination
@@ -197,20 +197,16 @@ Operation enable/disable should be handled in MCP itself. We now only select an 
 - Returns current MCP server configuration
 - Supports retrieving enabled status, URL, and API key
 
-### 4.5 Sentry Integration
-- Built-in error tracking with Sentry SDK
-- Configured via `SentryConfig` with DSN and environment
-
-### 4.6 Resource Unassignment
-- `POST /tracker/assign/{tracker_id}/` (empty resource_id)
+### 4.5 Resource Unassignment
+- `POST /tracker/assign/{tracker_id}` (empty resource_id)
 - Explicit API for removing resource assignments
 - Python version requires `None` in request body
 
-### 4.7 Database Triggers
+### 4.6 Database Triggers
 - Automatic `updated_at` timestamp updates via PostgreSQL triggers
 - Python relies on application-level timestamp management
 
-### 4.8 Multi-Siteplan Marker Support
+### 4.7 Multi-Siteplan Marker Support
 - **New mechanic:** One marker ID stored per resource per siteplan
 - `resource_marker` table with composite key (resource_id, siteplan_id)
 - When updating tracker position, system:
@@ -233,9 +229,25 @@ Operation enable/disable should be handled in MCP itself. We now only select an 
 
 ### 5.2 Configuration Changes
 - **Environment Variables:**
-  - MCP configuration now includes `MCP_ENABLED`, `MCP_SERVER_URL`, `MCP_API_KEY`
-  - SQL configuration more granular: `SQL_HOST`, `SQL_PORT`, `SQL_USER`, `SQL_PASSWORD`, `SQL_DB_NAME`
-  - New: `SENTRY_DSN`, `SENTRY_ENVIRONMENT`
+  - **Update Configuration:**
+    - `MCP_RESOURCE_UPDATE` - Periodic resource update interval in seconds (default: 5)
+  - **MCP Configuration:**
+    - `MCP_ENABLE_SSL_VERIFICATION` - Enable/disable SSL certificate verification (default: true)
+    - `MCP_TIMEOUT` - Request timeout in seconds (default: 10)
+  - **SQL Configuration:**
+    - `DB_HOST` - Database host (default: localhost)
+    - `DB_PORT` - Database port (default: 5432)
+    - `DB_USER` - Database user (default: postgres)
+    - `DB_PASSWORD` - Database password (required)
+    - `DB_NAME` - Database name (default: iris)
+    - `DB_SSLMODE` - SSL mode for database connection (default: disable)
+  - **Web Server Configuration:**
+    - `SERVER_ADDRESS` - Server bind address (default: 0.0.0.0:8080)
+    - `SERVER_READ_TIMEOUT` - Read timeout in seconds (default: 10)
+    - `SERVER_WRITE_TIMEOUT` - Write timeout in seconds (default: 10)
+    - `SERVER_IDLE_TIMEOUT` - Idle timeout in minutes (default: 2)
+    - `SERVER_MAX_HEADER_BYTES` - Maximum header size in bytes (default: 1048576)
+  - **Note:** MCP server URL, API key, enabled status, operation ID, and siteplan ID are now stored in database (`mcp_config` table) rather than environment variables
 
 
 ---
@@ -249,6 +261,6 @@ Operation enable/disable should be handled in MCP itself. We now only select an 
 
 ## Document Status
 - **Created:** January 28, 2026
-- **Last Updated:** Feburary 02, 2026
+- **Last Updated:** February 02, 2026
 - **Maintained By:** Development team
 - **Review Schedule:** Update after major milestones
