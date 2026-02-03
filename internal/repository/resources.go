@@ -60,7 +60,8 @@ func GetResourceByID(resourceID uuid.UUID) (*models.Resource, error) {
 // UpdateMarkerIDForResource associates an MCP marker ID with a resource for the current siteplan
 func UpdateMarkerIDForResource(resourceID, markerID uuid.UUID) error {
 	SQL := `INSERT INTO resource_marker (marker_id, resource_id, siteplan_id) 
-	VALUES ($1, $2, (SELECT siteplan_id FROM mcp_config WHERE id = 1))`
+	VALUES ($1, $2, (SELECT siteplan_id FROM mcp_config WHERE id = 1))
+	ON CONFLICT (resource_id, siteplan_id) DO UPDATE SET marker_id = EXCLUDED.marker_id`
 
 	_, err := DBConnPool.Exec(context.Background(), SQL, markerID, resourceID)
 	if err != nil {
