@@ -80,9 +80,9 @@ linters:
     # nestif:
     #   min-complexity: 6
 
-    # funlen:
-    #   statements: 50
-    #   lines: 90
+    funlen:
+      statements: 40
+      lines: 80
 
 
 run:
