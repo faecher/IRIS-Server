@@ -168,13 +168,13 @@ func parseAndVerifyTrackerID(c *gin.Context) (uuid.UUID, error) {
 	trackerID, err := uuid.FromString(c.Param("tracker_id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid tracker id"})
-		return uuid.Nil, err
+		return uuid.Nil, fmt.Errorf("invalid tracker ID: %w", err)
 	}
 	// test if tracker exists
 	_, err = repository.GetTrackerByID(trackerID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Tracker not found"})
-		return uuid.Nil, err
+		return uuid.Nil, fmt.Errorf("tracker not found: %w", err)
 	}
 
 	return trackerID, nil

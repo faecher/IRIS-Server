@@ -100,27 +100,30 @@ func loadAndInitMCP() {
 		return
 	}
 
-	if mcpConfig.URL != "" && mcpConfig.APIKey != "" {
-		slog.Info("MCP configuration found in database, initializing MCP client...")
-		mcpcontrol.MCPConfig = mcpConfig
+	if mcpConfig.URL == "" || mcpConfig.APIKey == "" {
+		slog.Info("MCP configuration incomplete (missing URL or API key). MCP client not initialized.")
+		return
+	}
 
-		if !mcpConfig.Enabled {
-			slog.Info("MCP integration is disabled in the configuration. Skipping connection test.")
-			return
-		}
+	slog.Info("MCP configuration found in database, initializing MCP client...")
+	mcpcontrol.MCPConfig = mcpConfig
 
-		err = mcpcontrol.TestMCPConnection()
+	if !mcpConfig.Enabled {
+		slog.Info("MCP integration is disabled in the configuration. Skipping connection test.")
+		return
+	}
+
+	err = mcpcontrol.TestMCPConnection()
+	if err != nil {
+		slog.Error("MCP connection test failed. Disabling MCP client.", "error", err)
+
+		mcpcontrol.MCPConfig.Enabled = false
+		err := repository.UpdateMCPConfig(mcpcontrol.MCPConfig)
 		if err != nil {
-			slog.Error("MCP connection test failed. Disabling MCP client.", "error", err)
-
-			mcpcontrol.MCPConfig.Enabled = false
-			err := repository.UpdateMCPConfig(mcpcontrol.MCPConfig)
-			if err != nil {
-				slog.Error("Failed to update MCP configuration in database:", "error", err)
-			}
-		} else {
-			slog.Info("MCP connection successful.")
+			slog.Error("Failed to update MCP configuration in database:", "error", err)
 		}
+	} else {
+		slog.Info("MCP connection successful.")
 	}
 }
 
