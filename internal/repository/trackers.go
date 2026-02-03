@@ -102,7 +102,6 @@ func GetAllTrackers() ([]models.Tracker, error) {
 		LEFT JOIN chirpstack_trackers ct ON t.tracker_id = ct.tracker_id
 		LEFT JOIN tetra_trackers tt ON t.tracker_id = tt.tracker_id
 		LEFT JOIN trackers_resource tr ON t.tracker_id = tr.tracker_id
-		LEFT JOIN resources r ON tr.resource_id = r.resource_id
 	`
 
 	rows, err := DBConnPool.Query(context.Background(), SQL)
