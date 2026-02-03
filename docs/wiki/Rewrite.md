@@ -170,8 +170,8 @@ Operation enable/disable should be handled in MCP itself. We now only select an 
 
 #### Background Tasks
 - **Python:** Scheduled via external task scheduler, `async` functions
-- **Go:** Not yet implemented (TODO: periodic MCP resource checks)
-- **Impact:** Go version needs background goroutine with ticker
+- **Go:** Background `syncResources` goroutine periodically calls `UpdateMCPResourcesInDB` to refresh MCP resources
+- **Impact:** MCP resources are kept in sync with MCP on a schedule via a ticker-driven goroutine
 
 ---
 
