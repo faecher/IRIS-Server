@@ -52,8 +52,6 @@ func mcpRequest(method, endpoint string, body io.ReadCloser) (*http.Response, er
 	req.Header.Set("Accept", "*/*")
 	req.Header.Set("Content-Type", "application/json")
 
-	req.Body = body
-
 	resp, err := mcpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to perform MCP request: %w", err)

@@ -58,7 +58,6 @@ CREATE TABLE tetra_trackers (
 
 CREATE TABLE resources (
 	resource_id uuid PRIMARY KEY,
-	marker_id uuid,
 	name text NOT NULL,
 	type text NOT NULL,
 	status SMALLINT,

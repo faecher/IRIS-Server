@@ -50,13 +50,13 @@ func GetMCPOperations() ([]models.MCPOperation, error) {
 func GetMCPSiteplans() ([]models.MCPSiteplan, error) {
 	// get current operation from DB
 	operationID, err := repository.GetMCPOperation()
-	if errors.Is(err, pgx.ErrNoRows) {
+	if errors.Is(err, pgx.ErrNoRows) || operationID == nil {
 		return nil, ErrNoOperationSelected
 	} else if err != nil {
 		return nil, fmt.Errorf("failed to get MCP operation: %w", err)
 	}
 
-	placeID, err := getMCPPlaceFromOperation(operationID)
+	placeID, err := getMCPPlaceFromOperation(*operationID)
 	if errors.Is(err, ErrNoPlaceAssociated) {
 		return nil, ErrNoPlaceAssociated
 	} else if err != nil {

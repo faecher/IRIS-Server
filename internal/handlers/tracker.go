@@ -2,13 +2,11 @@ package handlers
 
 import (
 	"IRIS-Server/internal/repository"
-	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gofrs/uuid/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 )
 
 // TrackerHandler registers all tracker-related HTTP endpoints
@@ -17,6 +15,7 @@ func TrackerHandler(router *gin.Engine) {
 
 	trackerGroup.GET("/", listTrackers)
 	trackerGroup.POST("assign/:tracker_id/:resource_id", assignResourceToTracker)
+	trackerGroup.POST("assign/:tracker_id", unassignResourceFromTracker)
 	trackerGroup.POST("rename/:tracker_id", renameTracker)
 }
 
@@ -47,29 +46,17 @@ func listTrackers(c *gin.Context) {
 // @Success 200 "Assignment updated successfully"
 // @Failure 400 {object} map[string]string "Invalid tracker or resource ID"
 // @Failure 404 {object} map[string]string "Tracker or resource not found"
-// @Failure 409 {object} map[string]string "Resource already assigned to another tracker"
 // @Failure 500 {object} map[string]string "Failed to update assignment"
 // @Router /tracker/assign/{tracker_id}/{resource_id} [post]
 func assignResourceToTracker(c *gin.Context) {
-	// parse tracker id
-	trackerID, err := uuid.FromString(c.Param("tracker_id"))
+	trackerID, err := parseAndVerifyTrackerID(c)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid tracker id"})
-		return
-	}
-	// test if tracker exists
-	_, err = repository.GetTrackerByID(trackerID)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Tracker not found"})
 		return
 	}
 
 	// parse resource id
 	resourceID, err := uuid.FromString(c.Param("resource_id"))
-	if err != nil && c.Param("resource_id") == "" {
-		// no resource id provided, unassign resource
-		resourceID = uuid.Nil
-	} else if err != nil {
+	if err != nil {
 		// resource id provided but invalid
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid resource id"})
 		return
@@ -82,6 +69,34 @@ func assignResourceToTracker(c *gin.Context) {
 	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update tracker resource assignment"})
+		return
+	}
+
+	c.Status(http.StatusOK)
+}
+
+// unassignResourceFromTracker removes the resource assignment from a tracker
+// @Summary Unassign resource from tracker
+// @Description Removes the resource assignment from a tracker
+// @Tags trackers
+// @Param tracker_id path string true "Tracker UUID"
+// @Success 200 "Resource unassigned successfully"
+// @Failure 400 {object} map[string]string "Invalid tracker ID"
+// @Failure 404 {object} map[string]string "Tracker not found"
+// @Failure 500 {object} map[string]string "Failed to remove tracker resource assignment"
+// @Router /tracker/assign/{tracker_id} [post]
+func unassignResourceFromTracker(c *gin.Context) {
+	trackerID, err := parseAndVerifyTrackerID(c)
+	if err != nil {
+		return
+	}
+
+	alreadyResponded, err := assignOrUnassignResourceToTracker(uuid.Nil, trackerID, c)
+	if alreadyResponded {
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove tracker resource assignment"})
 		return
 	}
 
@@ -130,21 +145,37 @@ func renameTracker(c *gin.Context) {
 func assignOrUnassignResourceToTracker(resourceID, trackerID uuid.UUID, c *gin.Context) (bool, error) {
 	if resourceID == uuid.Nil {
 		err := repository.RemoveTrackerAssignment(trackerID)
-		return false, fmt.Errorf("failed to remove tracker: %w", err)
+		return false, fmt.Errorf("failed to remove tracker assignment: %w", err)
 	}
 
 	_, err := repository.GetResourceByID(resourceID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Resource not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Resource not found"})
 		return true, fmt.Errorf("resource not found: %w", err)
 	}
 
 	err = repository.UpdateTrackerResource(trackerID, resourceID)
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) && pgErr.Code == "23505" { // unique_violation
-		c.JSON(http.StatusConflict, gin.H{"error": "Resource is already assigned to another tracker"})
-		return true, fmt.Errorf("resource is already assigned: %w", err)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update tracker resource assignment"})
+		return true, fmt.Errorf("failed to update tracker resource assignment: %w", err)
 	}
 
 	return false, nil
+}
+
+func parseAndVerifyTrackerID(c *gin.Context) (uuid.UUID, error) {
+	// parse tracker id
+	trackerID, err := uuid.FromString(c.Param("tracker_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid tracker id"})
+		return uuid.Nil, err
+	}
+	// test if tracker exists
+	_, err = repository.GetTrackerByID(trackerID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Tracker not found"})
+		return uuid.Nil, err
+	}
+
+	return trackerID, nil
 }

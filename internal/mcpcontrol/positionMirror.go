@@ -25,6 +25,10 @@ func UpdateMarkerInMCP(trackerID uuid.UUID) error {
 	if err != nil {
 		return fmt.Errorf("failed to get tracker: %w", err)
 	}
+	if tracker.Resource == nil {
+		// No resource assigned, nothing to update
+		return nil
+	}
 
 	marker, err := repository.GetResourceMarker(tracker.Resource.ID)
 	if err != nil {

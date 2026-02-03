@@ -65,7 +65,7 @@ func handleChirpstackWebhook(c *gin.Context) {
 		return
 	}
 
-	err = updateTrackerPositionInDB(c, tracker, eui)
+	err = updateTrackerPositionInDB(c, &tracker, eui)
 	if err != nil {
 		return
 	}
@@ -97,6 +97,7 @@ func handleChirpstackWebhook(c *gin.Context) {
 
 // getTrackerAndEuiFromContext extracts the tracker and DevEUI from the Chirpstack uplink event in the request context
 // This function also sets the appropriate HTTP error responses if extraction fails
+// if no tracker is found, trackerID will be uuid.Nil
 func getTrackerAndEuiFromContext(c *gin.Context) (*integration.UplinkEvent, uuid.UUID, string, error) {
 	var upMessage *integration.UplinkEvent
 	err := c.BindJSON(&upMessage)
@@ -122,10 +123,11 @@ func getTrackerAndEuiFromContext(c *gin.Context) (*integration.UplinkEvent, uuid
 
 // updateTrackerPositionInDB creates or updates the tracker record in the database
 // This function also sets the appropriate HTTP error responses if database operations fail
-func updateTrackerPositionInDB(c *gin.Context, tracker models.BaseTracker, eui string) error {
+// the returned ID is the tracker's UUID. Upon error, uuid.Nil is returned
+func updateTrackerPositionInDB(c *gin.Context, tracker *models.BaseTracker, eui string) error {
 	if tracker.ID == uuid.Nil { // Tracker unknown
 		chirpstackTracker := models.ChirpstackTracker{
-			BaseTracker: tracker, DevEUI: eui,
+			BaseTracker: *tracker, DevEUI: eui,
 		}
 
 		err := repository.CreateChirpstackTracker(&chirpstackTracker)
@@ -133,12 +135,15 @@ func updateTrackerPositionInDB(c *gin.Context, tracker models.BaseTracker, eui s
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create tracker: " + err.Error()})
 			return fmt.Errorf("failed to create tracker: %w", err)
 		}
-	} else {
-		err := repository.UpdateTracker(tracker)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update tracker: " + err.Error()})
-			return fmt.Errorf("failed to update tracker: %w", err)
-		}
+
+		return nil
+	}
+
+	// Tracker known, update existing record
+	err := repository.UpdateTracker(*tracker)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update tracker: " + err.Error()})
+		return fmt.Errorf("failed to update tracker: %w", err)
 	}
 
 	return nil

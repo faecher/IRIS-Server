@@ -38,16 +38,28 @@ Welcome to  ╚═╝╚═╝  ╚═╝╚═╝╚══════╝`)
 		log.Fatal(err)
 	}
 
+	// --- Database ---
 	err = repository.ConnectAndInitDatabase(cfg.SQL)
 	if err != nil {
 		slog.Error("Database connection and initialization failed:", "error", err)
 		return
 	}
 
+	// --- MCP ---
 	// Load mcp config from db
 	mcpcontrol.InitMCPClient(cfg.MCP)
 	loadAndInitMCP()
 
+	// MCP Resource Sync Goroutine
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go syncResources(ctx, cfg.Update.ResourceUpdate)
+
+	// If you need goroutines for background tasks, such as tracker polling,
+	// start them here just like the MCP resource sync above. You can reuse the provided context.
+
+	// --- Webserver ---
 	// Start Webserver
 	router := gin.Default()
 	registerHandlers(router)
@@ -67,15 +79,6 @@ Welcome to  ╚═╝╚═╝  ╚═╝╚═╝╚══════╝`)
 	if err != nil {
 		slog.Error("Server failed:", "error", err)
 	}
-
-	// MCP Resource Sync Goroutine
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	go syncResources(ctx, cfg.Update.ResourceUpdate)
-
-	// If you need goroutines for background tasks, such as tracker polling,
-	// start them here just like the MCP resource sync above. You can reuse the provided context.
 }
 
 func registerHandlers(router *gin.Engine) {
@@ -100,6 +103,11 @@ func loadAndInitMCP() {
 	if mcpConfig.URL != "" && mcpConfig.APIKey != "" {
 		slog.Info("MCP configuration found in database, initializing MCP client...")
 		mcpcontrol.MCPConfig = mcpConfig
+
+		if !mcpConfig.Enabled {
+			slog.Info("MCP integration is disabled in the configuration. Skipping connection test.")
+			return
+		}
 
 		err = mcpcontrol.TestMCPConnection()
 		if err != nil {

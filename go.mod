@@ -1,6 +1,6 @@
 module IRIS-Server
 
-go 1.25.6
+go 1.25
 
 require (
 	github.com/caarlos0/env/v10 v10.0.0

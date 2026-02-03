@@ -156,7 +156,8 @@ func TestUpdateMCPOperation(t *testing.T) {
 		// Verify
 		saved, err := repository.GetMCPOperation()
 		require.NoError(t, err)
-		assert.Equal(t, operationID, saved)
+		require.NotNil(t, saved)
+		assert.Equal(t, operationID, *saved)
 	})
 
 	t.Run("replace existing operation ID", func(t *testing.T) {
@@ -172,8 +173,9 @@ func TestUpdateMCPOperation(t *testing.T) {
 
 		saved, err := repository.GetMCPOperation()
 		require.NoError(t, err)
-		assert.Equal(t, secondID, saved)
-		assert.NotEqual(t, firstID, saved)
+		require.NotNil(t, saved)
+		assert.Equal(t, secondID, *saved)
+		assert.NotEqual(t, firstID, *saved)
 	})
 
 	t.Run("set nil UUID", func(t *testing.T) {
@@ -184,7 +186,8 @@ func TestUpdateMCPOperation(t *testing.T) {
 
 		saved, err := repository.GetMCPOperation()
 		require.NoError(t, err)
-		assert.Equal(t, uuid.Nil, saved)
+		require.NotNil(t, saved)
+		assert.Equal(t, uuid.Nil, *saved)
 	})
 
 	t.Run("multiple updates in sequence", func(t *testing.T) {
@@ -201,7 +204,8 @@ func TestUpdateMCPOperation(t *testing.T) {
 
 			saved, err := repository.GetMCPOperation()
 			require.NoError(t, err)
-			assert.Equal(t, id, saved)
+			require.NotNil(t, saved)
+			assert.Equal(t, id, *saved)
 		}
 	})
 }
@@ -225,7 +229,8 @@ func TestGetMCPOperation(t *testing.T) {
 
 		result, err := repository.GetMCPOperation()
 		require.NoError(t, err)
-		assert.Equal(t, expected, result)
+		require.NotNil(t, result)
+		assert.Equal(t, expected, *result)
 	})
 
 	t.Run("returns nil UUID when not set", func(t *testing.T) {
@@ -235,7 +240,8 @@ func TestGetMCPOperation(t *testing.T) {
 
 		result, err := repository.GetMCPOperation()
 		require.NoError(t, err)
-		assert.Equal(t, uuid.Nil, result)
+		require.NotNil(t, result)
+		assert.Equal(t, uuid.Nil, *result)
 	})
 }
 
@@ -258,7 +264,8 @@ func TestUpdateMCPSiteplan(t *testing.T) {
 
 		saved, err := repository.GetMCPSiteplan()
 		require.NoError(t, err)
-		assert.Equal(t, siteplanID, saved)
+		require.NotNil(t, saved)
+		assert.Equal(t, siteplanID, *saved)
 	})
 
 	t.Run("replace existing siteplan ID", func(t *testing.T) {
@@ -274,7 +281,8 @@ func TestUpdateMCPSiteplan(t *testing.T) {
 
 		saved, err := repository.GetMCPSiteplan()
 		require.NoError(t, err)
-		assert.Equal(t, secondID, saved)
+		require.NotNil(t, saved)
+		assert.Equal(t, secondID, *saved)
 	})
 
 	t.Run("set nil UUID", func(t *testing.T) {
@@ -285,7 +293,8 @@ func TestUpdateMCPSiteplan(t *testing.T) {
 
 		saved, err := repository.GetMCPSiteplan()
 		require.NoError(t, err)
-		assert.Equal(t, uuid.Nil, saved)
+		require.NotNil(t, saved)
+		assert.Equal(t, uuid.Nil, *saved)
 	})
 
 	t.Run("independent from operation ID", func(t *testing.T) {
@@ -302,11 +311,13 @@ func TestUpdateMCPSiteplan(t *testing.T) {
 		// Verify both are independent
 		savedOperation, err := repository.GetMCPOperation()
 		require.NoError(t, err)
-		assert.Equal(t, operationID, savedOperation)
+		require.NotNil(t, savedOperation)
+		assert.Equal(t, operationID, *savedOperation)
 
 		savedSiteplan, err := repository.GetMCPSiteplan()
 		require.NoError(t, err)
-		assert.Equal(t, siteplanID, savedSiteplan)
+		require.NotNil(t, savedSiteplan)
+		assert.Equal(t, siteplanID, *savedSiteplan)
 	})
 }
 
@@ -328,7 +339,8 @@ func TestGetMCPSiteplan(t *testing.T) {
 
 		result, err := repository.GetMCPSiteplan()
 		require.NoError(t, err)
-		assert.Equal(t, expected, result)
+		require.NotNil(t, result)
+		assert.Equal(t, expected, *result)
 	})
 
 	t.Run("returns nil UUID when not set", func(t *testing.T) {
@@ -338,6 +350,7 @@ func TestGetMCPSiteplan(t *testing.T) {
 
 		result, err := repository.GetMCPSiteplan()
 		require.NoError(t, err)
-		assert.Equal(t, uuid.Nil, result)
+		require.NotNil(t, result)
+		assert.Equal(t, uuid.Nil, *result)
 	})
 }

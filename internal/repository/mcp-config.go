@@ -36,15 +36,10 @@ func GetMCPConfig() (models.MCPConfig, error) {
 // UpdateMCPConfig replaces the entire MCP configuration (singleton)
 func UpdateMCPConfig(newConfig models.MCPConfig) error {
 	// Treat as singleton Config
-	SQL1 := `DELETE FROM mcp_config;`
-	SQL2 := `INSERT INTO mcp_config (id, url, api_key, enabled) VALUES (1, $1, $2, $3)`
+	SQL := `INSERT INTO mcp_config (id, url, api_key, enabled) VALUES (1, $1, $2, $3)
+	        ON CONFLICT (id) DO UPDATE SET url = $1, api_key = $2, enabled = $3`
 
-	_, err := DBConnPool.Exec(context.Background(), SQL1)
-	if err != nil {
-		return fmt.Errorf("failed to delete old MCP config: %w", err)
-	}
-
-	_, err = DBConnPool.Exec(context.Background(), SQL2, newConfig.URL, newConfig.APIKey, newConfig.Enabled)
+	_, err := DBConnPool.Exec(context.Background(), SQL, newConfig.URL, newConfig.APIKey, newConfig.Enabled)
 	if err != nil {
 		return fmt.Errorf("failed to insert new MCP config: %w", err)
 	}
@@ -68,13 +63,13 @@ func UpdateMCPOperation(operationID uuid.UUID) error {
 }
 
 // GetMCPOperation retrieves the currently selected MCP operation ID
-func GetMCPOperation() (uuid.UUID, error) {
+func GetMCPOperation() (*uuid.UUID, error) {
 	SQL := `SELECT operation_id FROM mcp_config WHERE id = 1`
 
-	var operationID uuid.UUID
+	var operationID *uuid.UUID
 	err := DBConnPool.QueryRow(context.Background(), SQL).Scan(&operationID)
 	if err != nil {
-		return uuid.Nil, fmt.Errorf("failed to query MCP operation: %w", err)
+		return nil, fmt.Errorf("failed to query MCP operation: %w", err)
 	}
 
 	return operationID, nil
@@ -95,13 +90,13 @@ func UpdateMCPSiteplan(siteplanID uuid.UUID) error {
 }
 
 // GetMCPSiteplan retrieves the currently selected MCP siteplan ID
-func GetMCPSiteplan() (uuid.UUID, error) {
+func GetMCPSiteplan() (*uuid.UUID, error) {
 	SQL := `SELECT siteplan_id FROM mcp_config WHERE id = 1`
 
-	var siteplanID uuid.UUID
+	var siteplanID *uuid.UUID
 	err := DBConnPool.QueryRow(context.Background(), SQL).Scan(&siteplanID)
 	if err != nil {
-		return uuid.Nil, fmt.Errorf("failed to query MCP siteplan: %w", err)
+		return nil, fmt.Errorf("failed to query MCP siteplan: %w", err)
 	}
 
 	return siteplanID, nil

@@ -141,6 +141,8 @@ func GetAllTrackers() ([]models.Tracker, error) {
 				BaseTracker: base,
 				ISSI:        *issi,
 			})
+		default:
+			trackers = append(trackers, &base)
 		}
 	}
 
