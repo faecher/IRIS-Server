@@ -192,7 +192,6 @@ func RenameTracker(trackerID uuid.UUID, newName string) error {
 
 // UpdateTracker updates battery and position values for a tracker.
 // Skips battery if < 0, skips position if latitude or longitude is infinity.
-// Caller is responsible to make sure the given tracker ID exists. Otherwise you will get an error
 func UpdateTracker(tracker models.BaseTracker) error {
 	SQLLatLong := `UPDATE trackers 
 	SET position_latitude = $1, position_longitude = $2 
