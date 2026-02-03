@@ -99,6 +99,12 @@ const docTemplate = `{
                                 "enabled": {
                                     "type": "boolean"
                                 },
+                                "operation_id": {
+                                    "type": "string"
+                                },
+                                "siteplan_id": {
+                                    "type": "string"
+                                },
                                 "url": {
                                     "type": "string"
                                 }
@@ -444,13 +450,63 @@ const docTemplate = `{
                 }
             }
         },
-        "/tracker/assign/{tracker_id}/{resource_id}": {
+        "/tracker/assign/{tracker_id}": {
             "post": {
-                "description": "Assigns a resource to a tracker or removes the assignment. Pass empty string for resource_id to unassign.",
+                "description": "Removes the resource assignment from a tracker",
                 "tags": [
                     "trackers"
                 ],
-                "summary": "Assign or unassign resource to tracker",
+                "summary": "Unassign resource from tracker",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tracker UUID",
+                        "name": "tracker_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Resource unassigned successfully"
+                    },
+                    "400": {
+                        "description": "Invalid tracker ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Tracker not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to remove tracker resource assignment",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tracker/assign/{tracker_id}/{resource_id}": {
+            "post": {
+                "description": "Assigns a resource to a tracker.",
+                "tags": [
+                    "trackers"
+                ],
+                "summary": "Assign a resource to tracker",
                 "parameters": [
                     {
                         "type": "string",
@@ -461,9 +517,10 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Resource UUID (empty to unassign)",
+                        "description": "Resource UUID",
                         "name": "resource_id",
-                        "in": "path"
+                        "in": "path",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -481,15 +538,6 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Tracker or resource not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "409": {
-                        "description": "Resource already assigned to another tracker",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -589,9 +637,6 @@ const docTemplate = `{
                 },
                 "resource": {
                     "$ref": "#/definitions/models.Resource"
-                },
-                "resourceId": {
-                    "type": "string"
                 }
             }
         },

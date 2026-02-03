@@ -14,8 +14,6 @@ definitions:
         $ref: '#/definitions/models.Position'
       resource:
         $ref: '#/definitions/models.Resource'
-      resourceId:
-        type: string
     type: object
   models.MCPConfig:
     properties:
@@ -139,6 +137,10 @@ paths:
                 type: string
               enabled:
                 type: boolean
+              operation_id:
+                type: string
+              siteplan_id:
+                type: string
               url:
                 type: string
             type: object
@@ -371,19 +373,52 @@ paths:
       summary: Get all trackers
       tags:
       - trackers
-  /tracker/assign/{tracker_id}/{resource_id}:
+  /tracker/assign/{tracker_id}:
     post:
-      description: Assigns a resource to a tracker or removes the assignment. Pass
-        empty string for resource_id to unassign.
+      description: Removes the resource assignment from a tracker
       parameters:
       - description: Tracker UUID
         in: path
         name: tracker_id
         required: true
         type: string
-      - description: Resource UUID (empty to unassign)
+      responses:
+        "200":
+          description: Resource unassigned successfully
+        "400":
+          description: Invalid tracker ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Tracker not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to remove tracker resource assignment
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Unassign resource from tracker
+      tags:
+      - trackers
+  /tracker/assign/{tracker_id}/{resource_id}:
+    post:
+      description: Assigns a resource to a tracker.
+      parameters:
+      - description: Tracker UUID
+        in: path
+        name: tracker_id
+        required: true
+        type: string
+      - description: Resource UUID
         in: path
         name: resource_id
+        required: true
         type: string
       responses:
         "200":
@@ -400,19 +435,13 @@ paths:
             additionalProperties:
               type: string
             type: object
-        "409":
-          description: Resource already assigned to another tracker
-          schema:
-            additionalProperties:
-              type: string
-            type: object
         "500":
           description: Failed to update assignment
           schema:
             additionalProperties:
               type: string
             type: object
-      summary: Assign or unassign resource to tracker
+      summary: Assign a resource to tracker
       tags:
       - trackers
   /tracker/rename/{tracker_id}:
