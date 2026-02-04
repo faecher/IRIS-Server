@@ -6,6 +6,7 @@ import (
 	"IRIS-Server/internal/config"
 	"IRIS-Server/internal/models"
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
@@ -15,7 +16,9 @@ import (
 
 var (
 	mcpClient = &http.Client{
-		Transport: &http.Transport{},
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: false},
+		},
 	}
 
 	// MCPConfig holds the configuration for MCP integration
