@@ -306,19 +306,26 @@ func TestUpdateMarkerIDForResource(t *testing.T) {
 		assert.Equal(t, marker2, result2.MarkerID)
 	})
 
-	t.Run("duplicate insert fails", func(t *testing.T) {
+	t.Run("upsert updates existing marker", func(t *testing.T) {
 		resourceID := insertTestResource(t, "Test Resource", "vehicle", 1)
 		defer cleanupResource(t, resourceID)
 
 		setupMCPConfigWithSiteplan(t)
-		markerID := uuid.Must(uuid.NewV4())
+		markerID1 := uuid.Must(uuid.NewV4())
+		markerID2 := uuid.Must(uuid.NewV4())
 
-		err := repository.UpdateMarkerIDForResource(resourceID, markerID)
+		// Insert first marker
+		err := repository.UpdateMarkerIDForResource(resourceID, markerID1)
 		require.NoError(t, err)
 
-		// Try to insert again with same resource and siteplan
-		err = repository.UpdateMarkerIDForResource(resourceID, markerID)
-		assert.Error(t, err) // Should fail due to unique constraint
+		// Update with new marker ID (upsert should succeed)
+		err = repository.UpdateMarkerIDForResource(resourceID, markerID2)
+		require.NoError(t, err)
+
+		// Verify the marker was updated
+		result, err := repository.GetResourceMarker(resourceID)
+		require.NoError(t, err)
+		assert.Equal(t, markerID2, result.MarkerID)
 	})
 }
 
