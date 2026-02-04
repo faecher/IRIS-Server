@@ -13,9 +13,9 @@ The [IRIS-Server](https://github.com/faecher/IRIS-Server) provides and relays th
 - Assign trackers to teams
 - Battery overview of all connected trackers
 - Monitor your team location in real-time
+- Data relay to MCP
 
 #### Coming Soon<sup>TM</sup>
-- Data relay to MCP
 - Readout of TETRA Digitalfunk GPS data 
 
 ## Setup & Full Documentation
