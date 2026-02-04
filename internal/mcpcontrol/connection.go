@@ -16,7 +16,7 @@ var ErrMCPConnectionFailed = errors.New("MCP connection failed")
 
 // TestMCPConnection checks connectivity to the MCP system by requesting its version endpoint.
 func TestMCPConnection(newConfig models.MCPConfig) error {
-	req, err := http.NewRequestWithContext(context.Background(), "GET", newConfig.URL+"/api/version", nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, newConfig.URL+"/api/version", nil)
 	if err != nil {
 		return fmt.Errorf("failed to create MCP request: %w", err)
 	}

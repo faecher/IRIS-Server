@@ -5,9 +5,12 @@ package repository
 import (
 	"IRIS-Server/internal/models"
 	"context"
+	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/gofrs/uuid/v5"
+	"github.com/jackc/pgx/v5"
 )
 
 // CreateChirpstackTracker creates a new Chirpstack tracker record in the database
@@ -16,14 +19,19 @@ import (
 func CreateChirpstackTracker(tracker *models.ChirpstackTracker) error {
 	newID := uuid.Must(uuid.NewV4())
 
-	tx, err := DBConnPool.Begin(context.Background())
+	transaction, err := DBConnPool.Begin(context.Background())
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback(context.Background())
+	defer func() {
+		err := transaction.Rollback(context.Background())
+		if err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			slog.Error("failed to rollback transaction", "error", err)
+		}
+	}()
 
 	// Insert into trackers table first
-	_, err = tx.Exec(context.Background(),
+	_, err = transaction.Exec(context.Background(),
 		`INSERT INTO trackers (tracker_id, name, battery, position_longitude, position_latitude)
 		VALUES ($1, $2, $3, $4, $5)`,
 		newID,
@@ -37,7 +45,7 @@ func CreateChirpstackTracker(tracker *models.ChirpstackTracker) error {
 	}
 
 	// Then insert into chirpstack_trackers table
-	_, err = tx.Exec(context.Background(),
+	_, err = transaction.Exec(context.Background(),
 		`INSERT INTO chirpstack_trackers (tracker_id, dev_eui)
 		VALUES ($1, $2)`,
 		newID,
@@ -47,7 +55,7 @@ func CreateChirpstackTracker(tracker *models.ChirpstackTracker) error {
 		return fmt.Errorf("failed to insert chirpstack tracker: %w", err)
 	}
 
-	err = tx.Commit(context.Background())
+	err = transaction.Commit(context.Background())
 	if err != nil {
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}

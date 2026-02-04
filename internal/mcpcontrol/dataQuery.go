@@ -24,7 +24,7 @@ var ErrNoPlaceAssociated = errors.New("no place associated with MCP operation")
 
 // GetMCPOperations fetches all available operations from the MCP API
 func GetMCPOperations() ([]models.MCPOperation, error) {
-	resp, err := mcpRequest("GET", "/api/operations", nil)
+	resp, err := mcpRequest(http.MethodGet, "/api/operations", nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to request MCP operations: %w", err)
 	}
@@ -65,7 +65,7 @@ func GetMCPSiteplans() ([]models.MCPSiteplan, error) {
 		return nil, fmt.Errorf("failed to get MCP place: %w", err)
 	}
 
-	resp, err := mcpRequest("GET", "/api/siteplan/template?placeId="+placeID.String(), nil)
+	resp, err := mcpRequest(http.MethodGet, "/api/siteplan/template?placeId="+placeID.String(), nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to request MCP siteplans: %w", err)
 	}
@@ -90,7 +90,7 @@ func GetMCPSiteplans() ([]models.MCPSiteplan, error) {
 }
 
 func getMCPPlaceFromOperation(operationID uuid.UUID) (uuid.UUID, error) {
-	resp, err := mcpRequest("GET", "/api/operations/"+operationID.String(), nil)
+	resp, err := mcpRequest(http.MethodGet, "/api/operations/"+operationID.String(), nil)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("failed to request MCP organization: %w", err)
 	}
@@ -120,7 +120,7 @@ func getMCPPlaceFromOperation(operationID uuid.UUID) (uuid.UUID, error) {
 }
 
 func getMCPResources() ([]models.Resource, error) {
-	resp, err := mcpRequest("GET", "/api/resources", nil)
+	resp, err := mcpRequest(http.MethodGet, "/api/resources", nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to request MCP resources: %w", err)
 	}

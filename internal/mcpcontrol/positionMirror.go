@@ -62,7 +62,7 @@ func UpdateMarkerInMCP(trackerID uuid.UUID) error {
 			return fmt.Errorf("failed to create new marker in MCP: %w", err)
 		}
 	} else { // Update existing marker
-		resp, err := mcpRequest("PUT", "/api/markers", body)
+		resp, err := mcpRequest(http.MethodPut, "/api/markers", body)
 		if err != nil {
 			return fmt.Errorf("failed to update marker: %w", err)
 		}
@@ -77,7 +77,7 @@ func UpdateMarkerInMCP(trackerID uuid.UUID) error {
 }
 
 func createNewMarkerInMCP(body io.ReadCloser, tracker *models.BaseTracker) error {
-	resp, err := mcpRequest("POST", "/api/markers", body)
+	resp, err := mcpRequest(http.MethodPost, "/api/markers", body)
 	if err != nil {
 		return fmt.Errorf("failed to create marker: %w", err)
 	}
