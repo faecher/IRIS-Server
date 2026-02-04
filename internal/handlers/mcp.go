@@ -227,17 +227,12 @@ func getMCPConfig(c *gin.Context) {
 }
 
 func testMCPConnection(newConfig models.MCPConfig) error {
-	oldConfig := mcpcontrol.MCPConfig
-	defer func() {
-		mcpcontrol.MCPConfig = oldConfig
-	}()
+	err := mcpcontrol.TestMCPConnection(newConfig)
+	if err != nil {
+		return fmt.Errorf("MCP connection test failed: %w", err)
+	}
 
 	mcpcontrol.MCPConfig = newConfig
-
-	err := mcpcontrol.TestMCPConnection()
-	if err != nil {
-		return fmt.Errorf("failed to test MCP connection: %w", err)
-	}
 
 	return nil
 }

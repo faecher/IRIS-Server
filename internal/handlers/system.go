@@ -34,7 +34,7 @@ func SystemHandler(router *gin.Engine) {
 // @Router /system/status [get]
 func getSystemStatus(c *gin.Context) {
 	dbStatus := repository.CheckDBConnection()
-	mcpStatus := mcpcontrol.TestMCPConnection()
+	mcpStatus := mcpcontrol.TestMCPConnection(mcpcontrol.MCPConfig)
 	activeTrackers, err := repository.GetActiveTrackerCount()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to count active trackers"})

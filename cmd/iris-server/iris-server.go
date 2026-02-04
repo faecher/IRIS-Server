@@ -115,7 +115,7 @@ func loadAndInitMCP() {
 		return
 	}
 
-	err = mcpcontrol.TestMCPConnection()
+	err = mcpcontrol.TestMCPConnection(mcpcontrol.MCPConfig)
 	if err != nil {
 		slog.Error("MCP connection test failed. Disabling MCP client.", "error", err)
 
