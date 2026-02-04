@@ -138,6 +138,8 @@ func updateTrackerPositionInDB(c *gin.Context, tracker *models.BaseTracker, eui 
 			return fmt.Errorf("failed to create tracker: %w", err)
 		}
 
+		// Propagate the newly created tracker ID back to the caller's BaseTracker
+		tracker.ID = chirpstackTracker.ID
 		return nil
 	}
 
