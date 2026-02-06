@@ -6,6 +6,7 @@ import (
 	"IRIS-Server/internal/mcpcontrol"
 	"IRIS-Server/internal/models"
 	"IRIS-Server/internal/repository"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -96,10 +97,20 @@ func setMCPOperation(c *gin.Context) {
 // @Tags mcp
 // @Produce json
 // @Success 200 {array} models.MCPSiteplan "List of siteplans"
+// @Failure 422 {object} map[string]string "No place associated with selected operation"
+// @Failure 428 {object} map[string]string "No operation selected"
 // @Failure 500 {object} map[string]string "Failed to fetch siteplans or no operation selected"
 // @Router /mcp/siteplans [get]
 func getMCPSiteplans(c *gin.Context) {
 	siteplans, err := mcpcontrol.GetMCPSiteplans()
+	if errors.Is(err, mcpcontrol.ErrNoOperationSelected) {
+		c.JSON(http.StatusPreconditionRequired, gin.H{"error": "No operation selected"})
+		return
+	}
+	if errors.Is(err, mcpcontrol.ErrNoPlaceAssociated) {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "No place associated with selected operation"})
+		return
+	}
 	if err != nil {
 		slog.Error("Failed to fetch MCP siteplans", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch MCP siteplans: " + err.Error()})
@@ -194,7 +205,7 @@ func startMCPIntegration(c *gin.Context) {
 	mcpcontrol.MCPConfig = config
 
 	err = mcpcontrol.UpdateMCPResourcesInDB()
-	if err != nil {
+	if err != nil && !errors.Is(err, mcpcontrol.ErrMCPDisabled) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update MCP resources: " + err.Error()})
 		return
 	}

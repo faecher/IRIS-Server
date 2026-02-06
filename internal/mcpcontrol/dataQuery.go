@@ -49,6 +49,9 @@ func GetMCPOperations() ([]models.MCPOperation, error) {
 }
 
 // GetMCPSiteplans fetches all siteplans for the currently selected operation
+// Throws ErrNoOperationSelected if no operation is selected
+// Throws ErrNoPlaceAssociated if the selected operation has no associated place
+// Throws ErrMCPRequestFailed if the MCP request fails
 func GetMCPSiteplans() ([]models.MCPSiteplan, error) {
 	// get current operation from DB
 	operationID, err := repository.GetMCPOperation()
