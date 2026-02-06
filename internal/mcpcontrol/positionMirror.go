@@ -27,18 +27,18 @@ func UpdateMarkerInMCP(trackerID uuid.UUID) error {
 	if err != nil {
 		return fmt.Errorf("failed to get tracker: %w", err)
 	}
-	if tracker.Resource == nil {
+	if tracker.TableauResource == nil {
 		// No resource assigned, nothing to update
 		return nil
 	}
 
-	marker, err := repository.GetResourceMarker(tracker.Resource.ID)
+	marker, err := repository.GetResourceMarker(tracker.TableauResource.Resource.ID)
 	if err != nil {
 		return fmt.Errorf("failed to get resource marker: %w", err)
 	}
 
 	requestBody := map[string]any{
-		"name": tracker.Resource.Name,
+		"name": tracker.TableauResource.Resource.Name,
 		"position": map[string]any{
 			"lat": tracker.Position.Latitude,
 			"lng": tracker.Position.Longitude,
@@ -110,7 +110,7 @@ func createNewMarkerInMCP(body io.ReadCloser, tracker *models.BaseTracker) error
 		return fmt.Errorf("failed to parse marker ID: %w", err)
 	}
 
-	err = repository.UpdateMarkerIDForResource(tracker.Resource.ID, markerID)
+	err = repository.UpdateMarkerIDForResource(tracker.TableauResource.ID, markerID)
 	if err != nil {
 		return fmt.Errorf("failed to update marker ID for resource: %w", err)
 	}

@@ -16,6 +16,17 @@ BEGIN
 END;
 ' language 'plpgsql';
 
+-- Trigger function to clear tracker assignments when operation changes
+CREATE OR REPLACE FUNCTION clear_tracker_assignments_on_operation_change()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF OLD.operation_id IS DISTINCT FROM NEW.operation_id THEN
+        DELETE FROM trackers_resource;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 
 -- =============================================================================
 -- MARK: Trackers
@@ -60,8 +71,6 @@ CREATE TABLE resources (
 	resource_id uuid PRIMARY KEY,
 	name text NOT NULL,
 	type text NOT NULL,
-	status SMALLINT,
-
 	
 	-- System
 	created_at timestamp DEFAULT CURRENT_TIMESTAMP,
@@ -70,6 +79,23 @@ CREATE TABLE resources (
 
 CREATE TRIGGER update_resources_updated_at 
     BEFORE UPDATE ON resources 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TABLE tableau_resources (
+	tableau_resource_id uuid PRIMARY KEY,
+	resource_id uuid NOT NULL REFERENCES resources(resource_id) ON DELETE CASCADE,
+	operation_id uuid NOT NULL,
+	status SMALLINT NOT NULL,
+
+	-- System
+	created_at timestamp DEFAULT CURRENT_TIMESTAMP,
+	updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
+
+	UNIQUE (resource_id, operation_id)
+);
+
+CREATE TRIGGER update_tableau_resources_updated_at 
+    BEFORE UPDATE ON tableau_resources 
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 
@@ -96,6 +122,10 @@ CREATE TABLE mcp_config (
 CREATE TRIGGER update_mcp_config_updated_at 
     BEFORE UPDATE ON mcp_config 
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER clear_tracker_assignments 
+    BEFORE UPDATE ON mcp_config 
+    FOR EACH ROW EXECUTE FUNCTION clear_tracker_assignments_on_operation_change();
 
 
 

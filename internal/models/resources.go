@@ -6,10 +6,17 @@ import "github.com/gofrs/uuid/v5"
 
 // Resource represents an MCP resource that can be assigned to trackers
 type Resource struct {
-	ID     uuid.UUID `db:"resource_id" json:"id"`
-	Name   string    `db:"name"        json:"name"`
-	Type   string    `db:"type"        json:"type"`
-	Status uint16    `db:"status"      json:"status"`
+	ID   uuid.UUID `db:"resource_id" json:"id"`
+	Name string    `db:"name"        json:"name"`
+	Type string    `db:"type"        json:"type"`
+}
+
+// TableauResource represents an MCP resource that is present in a specific operation
+type TableauResource struct {
+	ID          uuid.UUID `db:"tableau_resource_id" json:"id"`
+	OperationID uuid.UUID `db:"operation_id"        json:"operationId"`
+	Resource    Resource  `json:"resource"`
+	Status      uint16    `db:"status"              json:"status"`
 }
 
 // ResourceMarker associates a resource with an MCP marker on a specific siteplan

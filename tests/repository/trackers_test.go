@@ -127,6 +127,7 @@ func TestGetTrackerByID(t *testing.T) {
 	})
 
 	t.Run("tracker with assigned resource", func(t *testing.T) {
+		setupMCPConfigWithSiteplan(t) // Setup operation for resource filtering
 		trackerID := createTestTrackerDirect(t, "Tracker With Resource", 75, 10.0, 20.0, "WITHRESOURCE01")
 		defer cleanupTracker(t, trackerID)
 
@@ -139,9 +140,9 @@ func TestGetTrackerByID(t *testing.T) {
 		tracker, err := repository.GetTrackerByID(trackerID)
 		require.NoError(t, err)
 		assert.NotNil(t, tracker)
-		require.NotNil(t, tracker.Resource)
-		assert.Equal(t, resourceID, tracker.Resource.ID)
-		assert.Equal(t, "Test Resource", tracker.Resource.Name)
+		require.NotNil(t, tracker.TableauResource)
+		assert.Equal(t, resourceID, tracker.TableauResource.Resource.ID)
+		assert.Equal(t, "Test Resource", tracker.TableauResource.Resource.Name)
 	})
 
 	t.Run("tracker without assigned resource", func(t *testing.T) {
@@ -151,7 +152,7 @@ func TestGetTrackerByID(t *testing.T) {
 		tracker, err := repository.GetTrackerByID(trackerID)
 		require.NoError(t, err)
 		assert.NotNil(t, tracker)
-		assert.Nil(t, tracker.Resource)
+		assert.Nil(t, tracker.TableauResource)
 	})
 
 	t.Run("tracker with zero battery", func(t *testing.T) {
@@ -210,6 +211,7 @@ func TestGetAllTrackers(t *testing.T) {
 
 func TestUpdateTrackerResource(t *testing.T) {
 	t.Run("assign resource to tracker", func(t *testing.T) {
+		setupMCPConfigWithSiteplan(t) // Setup operation for resource filtering
 		trackerID := createTestTrackerDirect(t, "Tracker", 80, 10.0, 20.0, "ASSIGNRES00001")
 		defer cleanupTracker(t, trackerID)
 
@@ -221,11 +223,12 @@ func TestUpdateTrackerResource(t *testing.T) {
 
 		tracker, err := repository.GetTrackerByID(trackerID)
 		require.NoError(t, err)
-		require.NotNil(t, tracker.Resource)
-		assert.Equal(t, resourceID, tracker.Resource.ID)
+		require.NotNil(t, tracker.TableauResource)
+		assert.Equal(t, resourceID, tracker.TableauResource.Resource.ID)
 	})
 
 	t.Run("reassign resource", func(t *testing.T) {
+		setupMCPConfigWithSiteplan(t) // Setup operation for resource filtering
 		trackerID := createTestTrackerDirect(t, "Tracker", 80, 10.0, 20.0, "REASSIGNRES001")
 		defer cleanupTracker(t, trackerID)
 
@@ -242,11 +245,12 @@ func TestUpdateTrackerResource(t *testing.T) {
 
 		tracker, err := repository.GetTrackerByID(trackerID)
 		require.NoError(t, err)
-		require.NotNil(t, tracker.Resource)
-		assert.Equal(t, resource2, tracker.Resource.ID)
+		require.NotNil(t, tracker.TableauResource)
+		assert.Equal(t, resource2, tracker.TableauResource.Resource.ID)
 	})
 
 	t.Run("assign same resource to multiple trackers succeeds", func(t *testing.T) {
+		setupMCPConfigWithSiteplan(t) // Setup operation for resource filtering
 		tracker1 := createTestTrackerDirect(t, "Tracker 1", 80, 10.0, 20.0, "SAMERESTRACK01")
 		defer cleanupTracker(t, tracker1)
 		tracker2 := createTestTrackerDirect(t, "Tracker 2", 85, 20.0, 30.0, "SAMERESTRACK02")
@@ -265,11 +269,11 @@ func TestUpdateTrackerResource(t *testing.T) {
 		// Verify both trackers have the same resource
 		tracker1Data, err := repository.GetTrackerByID(tracker1)
 		require.NoError(t, err)
-		assert.Equal(t, resourceID, tracker1Data.Resource.ID)
+		assert.Equal(t, resourceID, tracker1Data.TableauResource.Resource.ID)
 
 		tracker2Data, err := repository.GetTrackerByID(tracker2)
 		require.NoError(t, err)
-		assert.Equal(t, resourceID, tracker2Data.Resource.ID)
+		assert.Equal(t, resourceID, tracker2Data.TableauResource.Resource.ID)
 	})
 
 	t.Run("assign non-existent resource fails", func(t *testing.T) {
@@ -315,7 +319,7 @@ func TestRemoveTrackerAssignment(t *testing.T) {
 
 		tracker, err := repository.GetTrackerByID(trackerID)
 		require.NoError(t, err)
-		assert.Nil(t, tracker.Resource)
+		assert.Nil(t, tracker.TableauResource)
 	})
 
 	t.Run("remove non-existent assignment succeeds", func(t *testing.T) {

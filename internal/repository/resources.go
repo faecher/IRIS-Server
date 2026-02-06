@@ -15,10 +15,19 @@ import (
 // ErrNoResourceFound indicates that no resource was found for the given criteria
 var ErrNoResourceFound = errors.New("no resource found")
 
-// GetAllResources retrieves all resources from the database
-func GetAllResources() ([]models.Resource, error) {
-	SQL := `SELECT resource_id, name, type, status
-	FROM resources`
+// GetAllResources retrieves all tableau resources for the currently selected operation
+func GetAllResources() ([]models.TableauResource, error) {
+	SQL := `
+	SELECT 
+		tr.tableau_resource_id,
+		tr.operation_id,
+		tr.status,
+		r.resource_id,
+		r.name,
+		r.type
+	FROM tableau_resources tr
+	JOIN resources r ON tr.resource_id = r.resource_id
+	WHERE tr.operation_id = (SELECT operation_id FROM mcp_config WHERE id = 1)`
 
 	rows, err := DBConnPool.Query(context.Background(), SQL)
 	if err != nil {
@@ -26,26 +35,54 @@ func GetAllResources() ([]models.Resource, error) {
 	}
 	defer rows.Close()
 
-	resources, err := pgx.CollectRows(rows, pgx.RowToStructByName[models.Resource])
+	var resources []models.TableauResource
+	for rows.Next() {
+		var tableauResource models.TableauResource
+		err := rows.Scan(
+			&tableauResource.ID,
+			&tableauResource.OperationID,
+			&tableauResource.Status,
+			&tableauResource.Resource.ID,
+			&tableauResource.Resource.Name,
+			&tableauResource.Resource.Type,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan resource row: %w", err)
+		}
+		resources = append(resources, tableauResource)
+	}
+
+	err = rows.Err()
 	if err != nil {
-		return nil, fmt.Errorf("failed to collect resource rows: %w", err)
+		return nil, fmt.Errorf("error iterating resource rows: %w", err)
 	}
 
 	return resources, nil
 }
 
-// GetResourceByID retrieves a single resource by UUID
-func GetResourceByID(resourceID uuid.UUID) (*models.Resource, error) {
-	SQL := `SELECT resource_id, name, type, status 
-	FROM resources
-	WHERE resource_id = $1`
+// GetResourceByID retrieves a single tableau resource by its base resource UUID
+func GetResourceByID(resourceID uuid.UUID) (*models.TableauResource, error) {
+	SQL := `
+	SELECT 
+		tr.tableau_resource_id,
+		tr.operation_id,
+		tr.status,
+		r.resource_id,
+		r.name,
+		r.type
+	FROM tableau_resources tr
+	JOIN resources r ON tr.resource_id = r.resource_id
+	WHERE r.resource_id = $1 
+	  AND tr.operation_id = (SELECT operation_id FROM mcp_config WHERE id = 1)`
 
-	var resource models.Resource
+	var tableauResource models.TableauResource
 	err := DBConnPool.QueryRow(context.Background(), SQL, resourceID).Scan(
-		&resource.ID,
-		&resource.Name,
-		&resource.Type,
-		&resource.Status,
+		&tableauResource.ID,
+		&tableauResource.OperationID,
+		&tableauResource.Status,
+		&tableauResource.Resource.ID,
+		&tableauResource.Resource.Name,
+		&tableauResource.Resource.Type,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNoResourceFound
@@ -54,7 +91,7 @@ func GetResourceByID(resourceID uuid.UUID) (*models.Resource, error) {
 		return nil, fmt.Errorf("failed to query resource by ID: %w", err)
 	}
 
-	return &resource, nil
+	return &tableauResource, nil
 }
 
 // UpdateMarkerIDForResource associates an MCP marker ID with a resource for the current siteplan
@@ -95,19 +132,39 @@ func GetResourceMarker(resourceID uuid.UUID) (models.ResourceMarker, error) {
 	return marker, nil
 }
 
-// UpsertResource creates or updates a resource in the database
-func UpsertResource(resource *models.Resource) error {
-	SQL := `INSERT INTO resources (resource_id, name, type, status) 
-	VALUES ($1, $2, $3, $4) ON CONFLICT (resource_id) DO UPDATE SET name = EXCLUDED.name, type = EXCLUDED.type, status = EXCLUDED.status`
+// UpsertResource creates or updates a tableau resource in the database
+func UpsertResource(resource *models.TableauResource) error {
+	// First, upsert the base resource
+	resourceSQL := `
+	INSERT INTO resources (resource_id, name, type) 
+	VALUES ($1, $2, $3) 
+	ON CONFLICT (resource_id) DO UPDATE 
+	SET name = EXCLUDED.name, type = EXCLUDED.type`
 
-	_, err := DBConnPool.Exec(context.Background(), SQL,
+	_, err := DBConnPool.Exec(context.Background(), resourceSQL,
+		resource.Resource.ID,
+		resource.Resource.Name,
+		resource.Resource.Type,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to upsert base resource: %w", err)
+	}
+
+	// Then, upsert the tableau_resource
+	tableauSQL := `
+	INSERT INTO tableau_resources (tableau_resource_id, resource_id, operation_id, status) 
+	VALUES ($1, $2, $3, $4) 
+	ON CONFLICT (resource_id, operation_id) DO UPDATE 
+	SET status = EXCLUDED.status, tableau_resource_id = EXCLUDED.tableau_resource_id`
+
+	_, err = DBConnPool.Exec(context.Background(), tableauSQL,
 		resource.ID,
-		resource.Name,
-		resource.Type,
+		resource.Resource.ID,
+		resource.OperationID,
 		resource.Status,
 	)
 	if err != nil {
-		return fmt.Errorf("failed to upsert resource: %w", err)
+		return fmt.Errorf("failed to upsert tableau resource: %w", err)
 	}
 
 	return nil

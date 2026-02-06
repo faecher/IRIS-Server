@@ -13,21 +13,44 @@ import (
 
 // Helper function to insert test resources
 func insertTestResource(t *testing.T, name, resourceType string, status uint16) uuid.UUID {
-	id := uuid.Must(uuid.NewV4())
-	SQL := `INSERT INTO resources (resource_id, name, type, status) VALUES ($1, $2, $3, $4)`
-	_, err := repository.DBConnPool.Exec(context.Background(), SQL, id, name, resourceType, status)
+	resourceID := uuid.Must(uuid.NewV4())
+	tableauResourceID := uuid.Must(uuid.NewV4())
+
+	// Get current operation ID from mcp_config (or use a default for testing)
+	var operationID uuid.UUID
+	err := repository.DBConnPool.QueryRow(context.Background(),
+		`SELECT COALESCE(operation_id, '00000000-0000-0000-0000-000000000000'::UUID) FROM mcp_config WHERE id = 1`).Scan(&operationID)
+	if err != nil {
+		// If no mcp_config exists, use a test operation ID
+		operationID = uuid.Must(uuid.NewV4())
+	}
+
+	// Insert base resource
+	SQL1 := `INSERT INTO resources (resource_id, name, type) VALUES ($1, $2, $3)`
+	_, err = repository.DBConnPool.Exec(context.Background(), SQL1, resourceID, name, resourceType)
 	require.NoError(t, err)
-	return id
+
+	// Insert tableau_resource
+	SQL2 := `INSERT INTO tableau_resources (tableau_resource_id, resource_id, operation_id, status) VALUES ($1, $2, $3, $4)`
+	_, err = repository.DBConnPool.Exec(context.Background(), SQL2, tableauResourceID, resourceID, operationID, status)
+	require.NoError(t, err)
+
+	return resourceID
 }
 
-// Helper to setup MCP config with siteplan
+// Helper to setup MCP config with siteplan and operation
 func setupMCPConfigWithSiteplan(t *testing.T) uuid.UUID {
+	operationID := uuid.Must(uuid.NewV4())
 	config := models.MCPConfig{
 		URL:     "https://test.com",
 		APIKey:  "test",
 		Enabled: true,
 	}
 	err := repository.UpdateMCPConfig(config)
+	require.NoError(t, err)
+
+	// Set operation ID
+	err = repository.UpdateMCPOperation(operationID)
 	require.NoError(t, err)
 
 	siteplanID := uuid.Must(uuid.NewV4())
@@ -45,19 +68,21 @@ func TestGetAllResources(t *testing.T) {
 	})
 
 	t.Run("returns single resource", func(t *testing.T) {
+		setupMCPConfigWithSiteplan(t) // Setup operation for filtering
 		id := insertTestResource(t, "Test Resource", "vehicle", 1)
 		defer cleanupResource(t, id)
 
 		resources, err := repository.GetAllResources()
 		require.NoError(t, err)
 		assert.Len(t, resources, 1)
-		assert.Equal(t, id, resources[0].ID)
-		assert.Equal(t, "Test Resource", resources[0].Name)
-		assert.Equal(t, "vehicle", resources[0].Type)
+		assert.Equal(t, id, resources[0].Resource.ID)
+		assert.Equal(t, "Test Resource", resources[0].Resource.Name)
+		assert.Equal(t, "vehicle", resources[0].Resource.Type)
 		assert.Equal(t, uint16(1), resources[0].Status)
 	})
 
 	t.Run("returns multiple resources", func(t *testing.T) {
+		setupMCPConfigWithSiteplan(t) // Setup operation for filtering
 		ids := []uuid.UUID{
 			insertTestResource(t, "Resource 1", "vehicle", 1),
 			insertTestResource(t, "Resource 2", "person", 2),
@@ -76,7 +101,7 @@ func TestGetAllResources(t *testing.T) {
 		// Verify all inserted resources are present
 		foundIDs := make(map[uuid.UUID]bool)
 		for _, resource := range resources {
-			foundIDs[resource.ID] = true
+			foundIDs[resource.Resource.ID] = true
 		}
 		for _, id := range ids {
 			assert.True(t, foundIDs[id], "Resource %s should be in results", id)
@@ -84,6 +109,7 @@ func TestGetAllResources(t *testing.T) {
 	})
 
 	t.Run("various resource types", func(t *testing.T) {
+		setupMCPConfigWithSiteplan(t)
 		types := []string{"vehicle", "person", "equipment", "drone", "robot"}
 		ids := make([]uuid.UUID, len(types))
 		for i, resourceType := range types {
@@ -101,6 +127,7 @@ func TestGetAllResources(t *testing.T) {
 	})
 
 	t.Run("various status values", func(t *testing.T) {
+		setupMCPConfigWithSiteplan(t)
 		statuses := []uint16{0, 1, 100, 255, 32767}
 		ids := make([]uuid.UUID, len(statuses))
 		for i, status := range statuses {
@@ -118,6 +145,7 @@ func TestGetAllResources(t *testing.T) {
 	})
 
 	t.Run("long resource names", func(t *testing.T) {
+		setupMCPConfigWithSiteplan(t)
 		longName := "A very long resource name that exceeds typical length limits and is repeated multiple times to make it very long"
 		id := insertTestResource(t, longName, "vehicle", 1)
 		defer cleanupResource(t, id)
@@ -128,6 +156,7 @@ func TestGetAllResources(t *testing.T) {
 	})
 
 	t.Run("special characters in names", func(t *testing.T) {
+		setupMCPConfigWithSiteplan(t)
 		specialNames := []string{
 			"Resource with spaces",
 			"Resource-with-dashes",
@@ -154,24 +183,17 @@ func TestGetAllResources(t *testing.T) {
 
 func TestGetResourceByID(t *testing.T) {
 	t.Run("valid resource ID", func(t *testing.T) {
-		expected := models.Resource{
-			ID:     uuid.Must(uuid.NewV4()),
-			Name:   "Test Vehicle",
-			Type:   "vehicle",
-			Status: 1,
-		}
-		SQL := `INSERT INTO resources (resource_id, name, type, status) VALUES ($1, $2, $3, $4)`
-		_, err := repository.DBConnPool.Exec(context.Background(), SQL, expected.ID, expected.Name, expected.Type, expected.Status)
-		require.NoError(t, err)
-		defer cleanupResource(t, expected.ID)
+		setupMCPConfigWithSiteplan(t)
+		resourceID := insertTestResource(t, "Test Vehicle", "vehicle", 1)
+		defer cleanupResource(t, resourceID)
 
-		resource, err := repository.GetResourceByID(expected.ID)
+		resource, err := repository.GetResourceByID(resourceID)
 		require.NoError(t, err)
 		assert.NotNil(t, resource)
-		assert.Equal(t, expected.ID, resource.ID)
-		assert.Equal(t, expected.Name, resource.Name)
-		assert.Equal(t, expected.Type, resource.Type)
-		assert.Equal(t, expected.Status, resource.Status)
+		assert.Equal(t, resourceID, resource.Resource.ID)
+		assert.Equal(t, "Test Vehicle", resource.Resource.Name)
+		assert.Equal(t, "vehicle", resource.Resource.Type)
+		assert.Equal(t, uint16(1), resource.Status)
 	})
 
 	t.Run("non-existent resource ID", func(t *testing.T) {
@@ -188,6 +210,7 @@ func TestGetResourceByID(t *testing.T) {
 	})
 
 	t.Run("multiple resources with different IDs", func(t *testing.T) {
+		setupMCPConfigWithSiteplan(t)
 		ids := []uuid.UUID{
 			insertTestResource(t, "Resource 1", "vehicle", 1),
 			insertTestResource(t, "Resource 2", "person", 2),
@@ -203,13 +226,14 @@ func TestGetResourceByID(t *testing.T) {
 		for i, id := range ids {
 			resource, err := repository.GetResourceByID(id)
 			require.NoError(t, err)
-			assert.Equal(t, id, resource.ID)
-			assert.Contains(t, resource.Name, "Resource")
+			assert.Equal(t, id, resource.Resource.ID)
+			assert.Contains(t, resource.Resource.Name, "Resource")
 			assert.Equal(t, uint16(i+1), resource.Status)
 		}
 	})
 
 	t.Run("resource with zero status", func(t *testing.T) {
+		setupMCPConfigWithSiteplan(t)
 		id := insertTestResource(t, "Zero Status Resource", "vehicle", 0)
 		defer cleanupResource(t, id)
 
@@ -219,6 +243,7 @@ func TestGetResourceByID(t *testing.T) {
 	})
 
 	t.Run("resource with max status", func(t *testing.T) {
+		setupMCPConfigWithSiteplan(t)
 		id := insertTestResource(t, "Max Status Resource", "vehicle", 32767)
 		defer cleanupResource(t, id)
 

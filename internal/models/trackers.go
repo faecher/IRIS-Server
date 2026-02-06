@@ -25,7 +25,7 @@ type Position struct {
 type BaseTracker struct {
 	Position `json:"position"`
 
-	Resource *Resource `json:"resource"`
+	TableauResource *TableauResource `json:"resource"`
 
 	ID         uuid.UUID `db:"tracker_id" json:"id"`
 	Name       string    `db:"name"       json:"name"`

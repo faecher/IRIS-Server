@@ -122,8 +122,15 @@ func getMCPPlaceFromOperation(operationID uuid.UUID) (uuid.UUID, error) {
 	return operation.Place.ID, nil
 }
 
-func getMCPResources() ([]models.Resource, error) {
-	resp, err := mcpRequest(http.MethodGet, "/api/resources", nil)
+func getMCPResources() ([]models.TableauResource, error) {
+	operationID, err := repository.GetMCPOperation()
+	if errors.Is(err, pgx.ErrNoRows) || operationID == nil {
+		return nil, ErrNoOperationSelected
+	} else if err != nil {
+		return nil, fmt.Errorf("failed to get MCP operation: %w", err)
+	}
+
+	resp, err := mcpRequest(http.MethodGet, "/api/tableau/resources?operationId="+operationID.String(), nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to request MCP resources: %w", err)
 	}
@@ -138,7 +145,7 @@ func getMCPResources() ([]models.Resource, error) {
 		return nil, fmt.Errorf("failed to read MCP resources response: %w", err)
 	}
 
-	var resources []models.Resource
+	var resources []models.TableauResource
 	err = json.Unmarshal(body, &resources)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal MCP resources: %w", err)

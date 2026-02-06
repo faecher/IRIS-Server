@@ -79,7 +79,7 @@ func handleChirpstackWebhook(c *gin.Context) {
 		return
 	}
 
-	if trackerData.Resource == nil {
+	if trackerData.TableauResource == nil {
 		// No resource assigned, skip MCP update
 		c.JSON(http.StatusOK, gin.H{"status": "success", "note": "no resource assigned, MCP update skipped"})
 		return

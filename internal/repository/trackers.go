@@ -238,7 +238,7 @@ func fillTrackerResource(tracker *models.BaseTracker, resourceID uuid.UUID) erro
 		return fmt.Errorf("failed to get resource by ID: %w", err)
 	}
 
-	tracker.Resource = resource
+	tracker.TableauResource = resource
 
 	return nil
 }
