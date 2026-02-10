@@ -60,8 +60,8 @@ func GetAllResources() ([]models.TableauResource, error) {
 	return resources, nil
 }
 
-// GetResourceByID retrieves a single tableau resource by its base resource UUID
-func GetResourceByID(resourceID uuid.UUID) (*models.TableauResource, error) {
+// GetResourceByID retrieves a single tableau resource by its tableau resource UUID
+func GetResourceByID(tableauResourceID uuid.UUID) (*models.TableauResource, error) {
 	SQL := `
 	SELECT 
 		tr.tableau_resource_id,
@@ -72,11 +72,11 @@ func GetResourceByID(resourceID uuid.UUID) (*models.TableauResource, error) {
 		r.type
 	FROM tableau_resources tr
 	JOIN resources r ON tr.resource_id = r.resource_id
-	WHERE r.resource_id = $1 
+	WHERE tr.tableau_resource_id = $1 
 	  AND tr.operation_id = (SELECT operation_id FROM mcp_config WHERE id = 1)`
 
 	var tableauResource models.TableauResource
-	err := DBConnPool.QueryRow(context.Background(), SQL, resourceID).Scan(
+	err := DBConnPool.QueryRow(context.Background(), SQL, tableauResourceID).Scan(
 		&tableauResource.ID,
 		&tableauResource.OperationID,
 		&tableauResource.Status,
@@ -95,12 +95,12 @@ func GetResourceByID(resourceID uuid.UUID) (*models.TableauResource, error) {
 }
 
 // UpdateMarkerIDForResource associates an MCP marker ID with a resource for the current siteplan
-func UpdateMarkerIDForResource(resourceID, markerID uuid.UUID) error {
+func UpdateMarkerIDForResource(tableauResourceID, markerID uuid.UUID) error {
 	SQL := `INSERT INTO resource_marker (marker_id, resource_id, siteplan_id) 
 	VALUES ($1, $2, (SELECT siteplan_id FROM mcp_config WHERE id = 1))
 	ON CONFLICT (resource_id, siteplan_id) DO UPDATE SET marker_id = EXCLUDED.marker_id`
 
-	_, err := DBConnPool.Exec(context.Background(), SQL, markerID, resourceID)
+	_, err := DBConnPool.Exec(context.Background(), SQL, markerID, tableauResourceID)
 	if err != nil {
 		return fmt.Errorf("failed to update marker ID for resource: %w", err)
 	}

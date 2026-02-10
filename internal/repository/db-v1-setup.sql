@@ -133,7 +133,7 @@ CREATE TRIGGER clear_tracker_assignments
 
 CREATE TABLE trackers_resource (
     tracker_id uuid PRIMARY KEY REFERENCES trackers(tracker_id) ON DELETE CASCADE,
-	resource_id uuid REFERENCES resources(resource_id) ON DELETE CASCADE
+	tableau_resource_id uuid REFERENCES tableau_resources(tableau_resource_id) ON DELETE CASCADE
 );
 
 CREATE TABLE resource_marker (

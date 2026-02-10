@@ -53,7 +53,7 @@ func GetTrackerByDevEUI(devEUI string) (uuid.UUID, error) {
 // GetTrackerByID retrieves a single tracker by UUID
 func GetTrackerByID(trackerID uuid.UUID) (*models.BaseTracker, error) {
 	SQL := `
-		SELECT trackers.tracker_id, name, battery, position_longitude, position_latitude, updated_at, tr.resource_id
+		SELECT trackers.tracker_id, name, battery, position_longitude, position_latitude, updated_at, tr.tableau_resource_id
 		FROM trackers
 		LEFT JOIN trackers_resource tr ON trackers.tracker_id = tr.tracker_id
 		WHERE trackers.tracker_id = $1
@@ -61,7 +61,7 @@ func GetTrackerByID(trackerID uuid.UUID) (*models.BaseTracker, error) {
 
 	// get base tracker info
 	var tracker models.BaseTracker
-	var resourceID *uuid.UUID
+	var tableauResourceID *uuid.UUID
 	err := DBConnPool.QueryRow(context.Background(), SQL, trackerID).Scan(
 		&tracker.ID,
 		&tracker.Name,
@@ -69,14 +69,14 @@ func GetTrackerByID(trackerID uuid.UUID) (*models.BaseTracker, error) {
 		&tracker.Position.Longitude,
 		&tracker.Position.Latitude,
 		&tracker.LastUpdate,
-		&resourceID,
+		&tableauResourceID,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query tracker by ID: %w", err)
 	}
 
-	if resourceID != nil {
-		err = fillTrackerResource(&tracker, *resourceID)
+	if tableauResourceID != nil {
+		err = fillTrackerResource(&tracker, *tableauResourceID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fill tracker resource: %w", err)
 		}
@@ -97,7 +97,7 @@ func GetAllTrackers() ([]models.Tracker, error) {
 			END as tracker_type,
 			ct.dev_eui,
 			tt.issi,
-			tr.resource_id
+			tr.tableau_resource_id
 		FROM trackers t
 		LEFT JOIN chirpstack_trackers ct ON t.tracker_id = ct.tracker_id
 		LEFT JOIN tetra_trackers tt ON t.tracker_id = tt.tracker_id
@@ -115,17 +115,17 @@ func GetAllTrackers() ([]models.Tracker, error) {
 		var base models.BaseTracker
 		var trackerType string
 		var devEUI, issi *string
-		var resourceID *uuid.UUID
+		var tableauResourceID *uuid.UUID
 
 		err = rows.Scan(&base.ID, &base.Name, &base.Battery,
 			&base.Position.Longitude, &base.Position.Latitude,
-			&base.LastUpdate, &trackerType, &devEUI, &issi, &resourceID)
+			&base.LastUpdate, &trackerType, &devEUI, &issi, &tableauResourceID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan tracker row: %w", err)
 		}
 
-		if resourceID != nil {
-			err = fillTrackerResource(&base, *resourceID)
+		if tableauResourceID != nil {
+			err = fillTrackerResource(&base, *tableauResourceID)
 			if err != nil {
 				return nil, fmt.Errorf("failed to fill tracker resource: %w", err)
 			}
@@ -151,14 +151,14 @@ func GetAllTrackers() ([]models.Tracker, error) {
 }
 
 // UpdateTrackerResource assigns a resource to a tracker, or updates an existing assignment
-func UpdateTrackerResource(trackerID, resourceID uuid.UUID) error {
+func UpdateTrackerResource(trackerID, tableauResourceID uuid.UUID) error {
 	SQL := `
-		INSERT INTO trackers_resource (tracker_id, resource_id)
+		INSERT INTO trackers_resource (tracker_id, tableau_resource_id)
 		VALUES ($1, $2)
-		ON CONFLICT (tracker_id) DO UPDATE SET resource_id = EXCLUDED.resource_id
+		ON CONFLICT (tracker_id) DO UPDATE SET tableau_resource_id = EXCLUDED.tableau_resource_id
 	`
 
-	_, err := DBConnPool.Exec(context.Background(), SQL, trackerID, resourceID)
+	_, err := DBConnPool.Exec(context.Background(), SQL, trackerID, tableauResourceID)
 	if err != nil {
 		return fmt.Errorf("failed to update tracker resource: %w", err)
 	}
@@ -229,12 +229,12 @@ func UpdateTracker(tracker models.BaseTracker) error {
 	return nil
 }
 
-func fillTrackerResource(tracker *models.BaseTracker, resourceID uuid.UUID) error {
-	if resourceID == uuid.Nil {
+func fillTrackerResource(tracker *models.BaseTracker, tableauResourceID uuid.UUID) error {
+	if tableauResourceID == uuid.Nil {
 		return nil
 	}
 
-	resource, err := GetResourceByID(resourceID)
+	resource, err := GetResourceByID(tableauResourceID)
 	if err != nil && !errors.Is(err, ErrNoResourceFound) {
 		return fmt.Errorf("failed to get resource by ID: %w", err)
 	}
