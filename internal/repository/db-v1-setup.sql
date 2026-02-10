@@ -47,9 +47,7 @@ CREATE TABLE trackers (
 	updated_at timestamp DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TRIGGER update_trackers_updated_at 
-    BEFORE UPDATE ON trackers 
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+-- Note: updated_at is manually controlled to prevent buffered/old messages from updating the timestamp
 
 
 

@@ -67,6 +67,11 @@ func handleChirpstackWebhook(c *gin.Context) {
 		return
 	}
 
+	// Check if message is newer than existing data (ignore buffered old messages)
+	if !verifyTrackerMessageFreshness(c, &tracker) {
+		return
+	}
+
 	err = updateTrackerPositionInDB(c, &tracker, eui)
 	if err != nil {
 		return
@@ -151,4 +156,21 @@ func updateTrackerPositionInDB(c *gin.Context, tracker *models.BaseTracker, eui 
 	}
 
 	return nil
+}
+
+func verifyTrackerMessageFreshness(c *gin.Context, newData *models.BaseTracker) bool {
+	if newData.ID != uuid.Nil && !newData.LastUpdate.IsZero() {
+		existingTracker, err := repository.GetTrackerByID(newData.ID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get existing tracker: " + err.Error()})
+			return false
+		}
+		if !existingTracker.LastUpdate.Before(newData.LastUpdate) {
+			// Existing data is newer or same, ignore this message
+			c.JSON(http.StatusOK, gin.H{"status": "ignored", "reason": "message older than existing data"})
+			return false
+		}
+	}
+
+	return true
 }

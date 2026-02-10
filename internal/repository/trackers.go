@@ -190,16 +190,17 @@ func RenameTracker(trackerID uuid.UUID, newName string) error {
 	return nil
 }
 
-// UpdateTracker updates battery and position values for a tracker.
+// UpdateTracker updates battery, position, and timestamp values for a tracker.
 // Skips battery if < 0, skips position if latitude or longitude is infinity.
+// Always updates the timestamp.
 func UpdateTracker(tracker models.BaseTracker) error {
 	SQLLatLong := `UPDATE trackers 
-	SET position_latitude = $1, position_longitude = $2 
-	WHERE tracker_id = $3`
+	SET position_latitude = $1, position_longitude = $2, updated_at = $3 
+	WHERE tracker_id = $4`
 
 	SQLBatt := `UPDATE trackers 
-	SET battery = $1 
-	WHERE tracker_id = $2`
+	SET battery = $1, updated_at = $2 
+	WHERE tracker_id = $3`
 
 	batteryUpdate := tracker.Battery >= 0
 	locationUpdate := !math.IsInf(tracker.Position.Latitude, 0) && !math.IsInf(tracker.Position.Longitude, 0)
@@ -210,7 +211,7 @@ func UpdateTracker(tracker models.BaseTracker) error {
 
 	if batteryUpdate {
 		_, err := DBConnPool.Exec(context.Background(), SQLBatt,
-			tracker.Battery, tracker.ID,
+			tracker.Battery, tracker.LastUpdate, tracker.ID,
 		)
 		if err != nil {
 			return fmt.Errorf("failed to update tracker battery: %w", err)
@@ -218,7 +219,7 @@ func UpdateTracker(tracker models.BaseTracker) error {
 	}
 	if locationUpdate {
 		_, err := DBConnPool.Exec(context.Background(), SQLLatLong,
-			tracker.Position.Latitude, tracker.Position.Longitude, tracker.ID,
+			tracker.Position.Latitude, tracker.Position.Longitude, tracker.LastUpdate, tracker.ID,
 		)
 		if err != nil {
 			return fmt.Errorf("failed to update tracker position: %w", err)

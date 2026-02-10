@@ -15,7 +15,7 @@ var (
 	ErrNoMessages = errors.New("no messages in uplink event")
 )
 
-// ParseChirpstackTrackerMessage extracts battery and position data from a Chirpstack uplink event
+// ParseChirpstackTrackerMessage extracts battery, position data, and timestamp from a Chirpstack uplink event
 func ParseChirpstackTrackerMessage(msg *integration.UplinkEvent, tracker *models.BaseTracker) error {
 	objectMap := msg.GetObject().AsMap()
 
@@ -30,7 +30,10 @@ func ParseChirpstackTrackerMessage(msg *integration.UplinkEvent, tracker *models
 	}
 
 	parseAllMessagesInMessageList(messageList, tracker)
-
+	// Extract timestamp from uplink event
+	if msg.GetTime() != nil {
+		tracker.LastUpdate = msg.GetTime().AsTime()
+	}
 	return nil
 }
 

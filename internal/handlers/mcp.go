@@ -206,7 +206,8 @@ func startMCPIntegration(c *gin.Context) {
 
 	err = mcpcontrol.UpdateMCPResourcesInDB()
 	if err != nil && !errors.Is(err, mcpcontrol.ErrMCPDisabled) {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update MCP resources: " + err.Error()})
+		// Status OK because we can connect to MCP, probably just no operation/siteplan selected
+		c.JSON(http.StatusOK, gin.H{"error": "Failed to update MCP resources: " + err.Error()})
 		return
 	}
 
