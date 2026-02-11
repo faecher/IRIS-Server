@@ -13,7 +13,7 @@ definitions:
       position:
         $ref: '#/definitions/models.Position'
       resource:
-        $ref: '#/definitions/models.Resource'
+        $ref: '#/definitions/models.TableauResource'
     type: object
   models.MCPConfig:
     properties:
@@ -68,10 +68,19 @@ definitions:
         type: string
       name:
         type: string
-      status:
-        type: integer
       type:
         type: string
+    type: object
+  models.TableauResource:
+    properties:
+      id:
+        type: string
+      operationId:
+        type: string
+      resource:
+        $ref: '#/definitions/models.Resource'
+      status:
+        type: integer
     type: object
 host: 0.0.0.0:8080
 info:
@@ -215,6 +224,18 @@ paths:
             items:
               $ref: '#/definitions/models.MCPSiteplan'
             type: array
+        "422":
+          description: No place associated with selected operation
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "428":
+          description: No operation selected
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Failed to fetch siteplans or no operation selected
           schema:
@@ -290,10 +311,10 @@ paths:
       - application/json
       responses:
         "200":
-          description: List of resources
+          description: List of Tableau resources
           schema:
             items:
-              $ref: '#/definitions/models.Resource'
+              $ref: '#/definitions/models.TableauResource'
             type: array
         "500":
           description: Failed to fetch resources
@@ -406,7 +427,7 @@ paths:
       summary: Unassign resource from tracker
       tags:
       - trackers
-  /tracker/assign/{tracker_id}/{resource_id}:
+  /tracker/assign/{tracker_id}/{tableau_resource_id}:
     post:
       description: Assigns a resource to a tracker.
       parameters:
@@ -415,22 +436,22 @@ paths:
         name: tracker_id
         required: true
         type: string
-      - description: Resource UUID
+      - description: Tableau Resource UUID
         in: path
-        name: resource_id
+        name: tableau_resource_id
         required: true
         type: string
       responses:
         "200":
           description: Assignment updated successfully
         "400":
-          description: Invalid tracker or resource ID
+          description: Invalid tracker or tableau resource ID
           schema:
             additionalProperties:
               type: string
             type: object
         "404":
-          description: Tracker or resource not found
+          description: Tracker or tableau resource not found
           schema:
             additionalProperties:
               type: string
