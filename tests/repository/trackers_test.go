@@ -131,17 +131,17 @@ func TestGetTrackerByID(t *testing.T) {
 		trackerID := createTestTrackerDirect(t, "Tracker With Resource", 75, 10.0, 20.0, "WITHRESOURCE01")
 		defer cleanupTracker(t, trackerID)
 
-		resourceID := insertTestResource(t, "Test Resource", "vehicle", 1)
-		defer cleanupResource(t, resourceID)
+		tableauResourceID := insertTestResource(t, "Test Resource", "vehicle", 1)
+		defer cleanupResource(t, tableauResourceID)
 
-		err := repository.UpdateTrackerResource(trackerID, resourceID)
+		err := repository.UpdateTrackerResource(trackerID, tableauResourceID)
 		require.NoError(t, err)
 
 		tracker, err := repository.GetTrackerByID(trackerID)
 		require.NoError(t, err)
 		assert.NotNil(t, tracker)
 		require.NotNil(t, tracker.TableauResource)
-		assert.Equal(t, resourceID, tracker.TableauResource.Resource.ID)
+		assert.Equal(t, tableauResourceID, tracker.TableauResource.ID)
 		assert.Equal(t, "Test Resource", tracker.TableauResource.Resource.Name)
 	})
 
@@ -215,16 +215,16 @@ func TestUpdateTrackerResource(t *testing.T) {
 		trackerID := createTestTrackerDirect(t, "Tracker", 80, 10.0, 20.0, "ASSIGNRES00001")
 		defer cleanupTracker(t, trackerID)
 
-		resourceID := insertTestResource(t, "Resource", "vehicle", 1)
-		defer cleanupResource(t, resourceID)
+		tableauResourceID := insertTestResource(t, "Resource", "vehicle", 1)
+		defer cleanupResource(t, tableauResourceID)
 
-		err := repository.UpdateTrackerResource(trackerID, resourceID)
+		err := repository.UpdateTrackerResource(trackerID, tableauResourceID)
 		require.NoError(t, err)
 
 		tracker, err := repository.GetTrackerByID(trackerID)
 		require.NoError(t, err)
 		require.NotNil(t, tracker.TableauResource)
-		assert.Equal(t, resourceID, tracker.TableauResource.Resource.ID)
+		assert.Equal(t, tableauResourceID, tracker.TableauResource.ID)
 	})
 
 	t.Run("reassign resource", func(t *testing.T) {
@@ -232,21 +232,21 @@ func TestUpdateTrackerResource(t *testing.T) {
 		trackerID := createTestTrackerDirect(t, "Tracker", 80, 10.0, 20.0, "REASSIGNRES001")
 		defer cleanupTracker(t, trackerID)
 
-		resource1 := insertTestResource(t, "Resource 1", "vehicle", 1)
-		defer cleanupResource(t, resource1)
-		resource2 := insertTestResource(t, "Resource 2", "person", 2)
-		defer cleanupResource(t, resource2)
+		tableauResource1 := insertTestResource(t, "Resource 1", "vehicle", 1)
+		defer cleanupResource(t, tableauResource1)
+		tableauResource2 := insertTestResource(t, "Resource 2", "person", 2)
+		defer cleanupResource(t, tableauResource2)
 
-		err := repository.UpdateTrackerResource(trackerID, resource1)
+		err := repository.UpdateTrackerResource(trackerID, tableauResource1)
 		require.NoError(t, err)
 
-		err = repository.UpdateTrackerResource(trackerID, resource2)
+		err = repository.UpdateTrackerResource(trackerID, tableauResource2)
 		require.NoError(t, err)
 
 		tracker, err := repository.GetTrackerByID(trackerID)
 		require.NoError(t, err)
 		require.NotNil(t, tracker.TableauResource)
-		assert.Equal(t, resource2, tracker.TableauResource.Resource.ID)
+		assert.Equal(t, tableauResource2, tracker.TableauResource.ID)
 	})
 
 	t.Run("assign same resource to multiple trackers succeeds", func(t *testing.T) {
@@ -256,24 +256,24 @@ func TestUpdateTrackerResource(t *testing.T) {
 		tracker2 := createTestTrackerDirect(t, "Tracker 2", 85, 20.0, 30.0, "SAMERESTRACK02")
 		defer cleanupTracker(t, tracker2)
 
-		resourceID := insertTestResource(t, "Shared Resource", "vehicle", 1)
-		defer cleanupResource(t, resourceID)
+		tableauResourceID := insertTestResource(t, "Shared Resource", "vehicle", 1)
+		defer cleanupResource(t, tableauResourceID)
 
-		err := repository.UpdateTrackerResource(tracker1, resourceID)
+		err := repository.UpdateTrackerResource(tracker1, tableauResourceID)
 		require.NoError(t, err)
 
 		// Multiple trackers can be assigned to the same resource
-		err = repository.UpdateTrackerResource(tracker2, resourceID)
+		err = repository.UpdateTrackerResource(tracker2, tableauResourceID)
 		assert.NoError(t, err, "Multiple trackers can share a resource")
 
 		// Verify both trackers have the same resource
 		tracker1Data, err := repository.GetTrackerByID(tracker1)
 		require.NoError(t, err)
-		assert.Equal(t, resourceID, tracker1Data.TableauResource.Resource.ID)
+		assert.Equal(t, tableauResourceID, tracker1Data.TableauResource.ID)
 
 		tracker2Data, err := repository.GetTrackerByID(tracker2)
 		require.NoError(t, err)
-		assert.Equal(t, resourceID, tracker2Data.TableauResource.Resource.ID)
+		assert.Equal(t, tableauResourceID, tracker2Data.TableauResource.ID)
 	})
 
 	t.Run("assign non-existent resource fails", func(t *testing.T) {
@@ -286,11 +286,12 @@ func TestUpdateTrackerResource(t *testing.T) {
 	})
 
 	t.Run("assign to non-existent tracker fails", func(t *testing.T) {
-		resourceID := insertTestResource(t, "Resource", "vehicle", 1)
-		defer cleanupResource(t, resourceID)
+		setupMCPConfigWithSiteplan(t)
+		tableauResourceID := insertTestResource(t, "Resource", "vehicle", 1)
+		defer cleanupResource(t, tableauResourceID)
 
 		nonExistentTracker := uuid.Must(uuid.NewV4())
-		err := repository.UpdateTrackerResource(nonExistentTracker, resourceID)
+		err := repository.UpdateTrackerResource(nonExistentTracker, tableauResourceID)
 		assert.Error(t, err)
 	})
 
@@ -305,13 +306,14 @@ func TestUpdateTrackerResource(t *testing.T) {
 
 func TestRemoveTrackerAssignment(t *testing.T) {
 	t.Run("remove existing assignment", func(t *testing.T) {
+		setupMCPConfigWithSiteplan(t)
 		trackerID := createTestTrackerDirect(t, "Tracker", 80, 10.0, 20.0, "REMASSIGN00001")
 		defer cleanupTracker(t, trackerID)
 
-		resourceID := insertTestResource(t, "Resource", "vehicle", 1)
-		defer cleanupResource(t, resourceID)
+		tableauResourceID := insertTestResource(t, "Resource", "vehicle", 1)
+		defer cleanupResource(t, tableauResourceID)
 
-		err := repository.UpdateTrackerResource(trackerID, resourceID)
+		err := repository.UpdateTrackerResource(trackerID, tableauResourceID)
 		require.NoError(t, err)
 
 		err = repository.RemoveTrackerAssignment(trackerID)

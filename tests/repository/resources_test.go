@@ -35,7 +35,7 @@ func insertTestResource(t *testing.T, name, resourceType string, status uint16) 
 	_, err = repository.DBConnPool.Exec(context.Background(), SQL2, tableauResourceID, resourceID, operationID, status)
 	require.NoError(t, err)
 
-	return resourceID
+	return tableauResourceID
 }
 
 // Helper to setup MCP config with siteplan and operation
@@ -60,6 +60,15 @@ func setupMCPConfigWithSiteplan(t *testing.T) uuid.UUID {
 	return siteplanID
 }
 
+// Helper to get base resource_id from tableau_resource_id
+func getBaseResourceID(t *testing.T, tableauResourceID uuid.UUID) uuid.UUID {
+	var resourceID uuid.UUID
+	SQL := `SELECT resource_id FROM tableau_resources WHERE tableau_resource_id = $1`
+	err := repository.DBConnPool.QueryRow(context.Background(), SQL, tableauResourceID).Scan(&resourceID)
+	require.NoError(t, err)
+	return resourceID
+}
+
 func TestGetAllResources(t *testing.T) {
 	t.Run("empty database returns empty list", func(t *testing.T) {
 		resources, err := repository.GetAllResources()
@@ -69,13 +78,13 @@ func TestGetAllResources(t *testing.T) {
 
 	t.Run("returns single resource", func(t *testing.T) {
 		setupMCPConfigWithSiteplan(t) // Setup operation for filtering
-		id := insertTestResource(t, "Test Resource", "vehicle", 1)
-		defer cleanupResource(t, id)
+		tableauResourceID := insertTestResource(t, "Test Resource", "vehicle", 1)
+		defer cleanupResource(t, tableauResourceID)
 
 		resources, err := repository.GetAllResources()
 		require.NoError(t, err)
 		assert.Len(t, resources, 1)
-		assert.Equal(t, id, resources[0].Resource.ID)
+		assert.Equal(t, tableauResourceID, resources[0].ID)
 		assert.Equal(t, "Test Resource", resources[0].Resource.Name)
 		assert.Equal(t, "vehicle", resources[0].Resource.Type)
 		assert.Equal(t, uint16(1), resources[0].Status)
@@ -101,7 +110,7 @@ func TestGetAllResources(t *testing.T) {
 		// Verify all inserted resources are present
 		foundIDs := make(map[uuid.UUID]bool)
 		for _, resource := range resources {
-			foundIDs[resource.Resource.ID] = true
+			foundIDs[resource.ID] = true
 		}
 		for _, id := range ids {
 			assert.True(t, foundIDs[id], "Resource %s should be in results", id)
@@ -184,13 +193,13 @@ func TestGetAllResources(t *testing.T) {
 func TestGetResourceByID(t *testing.T) {
 	t.Run("valid resource ID", func(t *testing.T) {
 		setupMCPConfigWithSiteplan(t)
-		resourceID := insertTestResource(t, "Test Vehicle", "vehicle", 1)
-		defer cleanupResource(t, resourceID)
+		tableauResourceID := insertTestResource(t, "Test Vehicle", "vehicle", 1)
+		defer cleanupResource(t, tableauResourceID)
 
-		resource, err := repository.GetResourceByID(resourceID)
+		resource, err := repository.GetResourceByID(tableauResourceID)
 		require.NoError(t, err)
 		assert.NotNil(t, resource)
-		assert.Equal(t, resourceID, resource.Resource.ID)
+		assert.Equal(t, tableauResourceID, resource.ID)
 		assert.Equal(t, "Test Vehicle", resource.Resource.Name)
 		assert.Equal(t, "vehicle", resource.Resource.Type)
 		assert.Equal(t, uint16(1), resource.Status)
@@ -226,7 +235,7 @@ func TestGetResourceByID(t *testing.T) {
 		for i, id := range ids {
 			resource, err := repository.GetResourceByID(id)
 			require.NoError(t, err)
-			assert.Equal(t, id, resource.Resource.ID)
+			assert.Equal(t, id, resource.ID)
 			assert.Contains(t, resource.Resource.Name, "Resource")
 			assert.Equal(t, uint16(i+1), resource.Status)
 		}
@@ -255,20 +264,21 @@ func TestGetResourceByID(t *testing.T) {
 
 func TestUpdateMarkerIDForResource(t *testing.T) {
 	t.Run("insert marker for resource", func(t *testing.T) {
-		resourceID := insertTestResource(t, "Test Resource", "vehicle", 1)
-		defer cleanupResource(t, resourceID)
+		tableauResourceID := insertTestResource(t, "Test Resource", "vehicle", 1)
+		defer cleanupResource(t, tableauResourceID)
+		baseResourceID := getBaseResourceID(t, tableauResourceID)
 
 		siteplanID := setupMCPConfigWithSiteplan(t)
 		markerID := uuid.Must(uuid.NewV4())
 
-		err := repository.UpdateMarkerIDForResource(resourceID, markerID)
+		err := repository.UpdateMarkerIDForResource(baseResourceID, markerID)
 		require.NoError(t, err)
 
 		// Verify insertion
-		marker, err := repository.GetResourceMarker(resourceID)
+		marker, err := repository.GetResourceMarker(tableauResourceID)
 		require.NoError(t, err)
 		assert.Equal(t, markerID, marker.MarkerID)
-		assert.Equal(t, resourceID, marker.ResourceID)
+		assert.Equal(t, baseResourceID, marker.ResourceID)
 		assert.Equal(t, siteplanID, marker.SiteplanID)
 	})
 
@@ -282,12 +292,13 @@ func TestUpdateMarkerIDForResource(t *testing.T) {
 	})
 
 	t.Run("insert with nil marker ID", func(t *testing.T) {
-		resourceID := insertTestResource(t, "Test Resource", "vehicle", 1)
-		defer cleanupResource(t, resourceID)
+		tableauResourceID := insertTestResource(t, "Test Resource", "vehicle", 1)
+		defer cleanupResource(t, tableauResourceID)
+		baseResourceID := getBaseResourceID(t, tableauResourceID)
 
 		setupMCPConfigWithSiteplan(t)
 
-		err := repository.UpdateMarkerIDForResource(resourceID, uuid.Nil)
+		err := repository.UpdateMarkerIDForResource(baseResourceID, uuid.Nil)
 		require.NoError(t, err)
 	})
 
@@ -300,13 +311,14 @@ func TestUpdateMarkerIDForResource(t *testing.T) {
 	})
 
 	t.Run("multiple markers for same resource different siteplans", func(t *testing.T) {
-		resourceID := insertTestResource(t, "Test Resource", "vehicle", 1)
-		defer cleanupResource(t, resourceID)
+		tableauResourceID := insertTestResource(t, "Test Resource", "vehicle", 1)
+		defer cleanupResource(t, tableauResourceID)
+		baseResourceID := getBaseResourceID(t, tableauResourceID)
 
 		// First siteplan
 		siteplan1 := setupMCPConfigWithSiteplan(t)
 		marker1 := uuid.Must(uuid.NewV4())
-		err := repository.UpdateMarkerIDForResource(resourceID, marker1)
+		err := repository.UpdateMarkerIDForResource(baseResourceID, marker1)
 		require.NoError(t, err)
 
 		// Change to second siteplan
@@ -314,41 +326,42 @@ func TestUpdateMarkerIDForResource(t *testing.T) {
 		err = repository.UpdateMCPSiteplan(siteplan2)
 		require.NoError(t, err)
 		marker2 := uuid.Must(uuid.NewV4())
-		err = repository.UpdateMarkerIDForResource(resourceID, marker2)
+		err = repository.UpdateMarkerIDForResource(baseResourceID, marker2)
 		require.NoError(t, err)
 
 		// Verify both exist
 		err = repository.UpdateMCPSiteplan(siteplan1)
 		require.NoError(t, err)
-		result1, err := repository.GetResourceMarker(resourceID)
+		result1, err := repository.GetResourceMarker(tableauResourceID)
 		require.NoError(t, err)
 		assert.Equal(t, marker1, result1.MarkerID)
 
 		err = repository.UpdateMCPSiteplan(siteplan2)
 		require.NoError(t, err)
-		result2, err := repository.GetResourceMarker(resourceID)
+		result2, err := repository.GetResourceMarker(tableauResourceID)
 		require.NoError(t, err)
 		assert.Equal(t, marker2, result2.MarkerID)
 	})
 
 	t.Run("upsert updates existing marker", func(t *testing.T) {
-		resourceID := insertTestResource(t, "Test Resource", "vehicle", 1)
-		defer cleanupResource(t, resourceID)
+		tableauResourceID := insertTestResource(t, "Test Resource", "vehicle", 1)
+		defer cleanupResource(t, tableauResourceID)
+		baseResourceID := getBaseResourceID(t, tableauResourceID)
 
 		setupMCPConfigWithSiteplan(t)
 		markerID1 := uuid.Must(uuid.NewV4())
 		markerID2 := uuid.Must(uuid.NewV4())
 
 		// Insert first marker
-		err := repository.UpdateMarkerIDForResource(resourceID, markerID1)
+		err := repository.UpdateMarkerIDForResource(baseResourceID, markerID1)
 		require.NoError(t, err)
 
 		// Update with new marker ID (upsert should succeed)
-		err = repository.UpdateMarkerIDForResource(resourceID, markerID2)
+		err = repository.UpdateMarkerIDForResource(baseResourceID, markerID2)
 		require.NoError(t, err)
 
 		// Verify the marker was updated
-		result, err := repository.GetResourceMarker(resourceID)
+		result, err := repository.GetResourceMarker(tableauResourceID)
 		require.NoError(t, err)
 		assert.Equal(t, markerID2, result.MarkerID)
 	})
@@ -356,32 +369,34 @@ func TestUpdateMarkerIDForResource(t *testing.T) {
 
 func TestGetResourceMarker(t *testing.T) {
 	t.Run("get existing marker", func(t *testing.T) {
-		resourceID := insertTestResource(t, "Test Resource", "vehicle", 1)
-		defer cleanupResource(t, resourceID)
+		tableauResourceID := insertTestResource(t, "Test Resource", "vehicle", 1)
+		defer cleanupResource(t, tableauResourceID)
+		baseResourceID := getBaseResourceID(t, tableauResourceID)
 
 		siteplanID := setupMCPConfigWithSiteplan(t)
 		markerID := uuid.Must(uuid.NewV4())
 
-		err := repository.UpdateMarkerIDForResource(resourceID, markerID)
+		err := repository.UpdateMarkerIDForResource(baseResourceID, markerID)
 		require.NoError(t, err)
 
-		marker, err := repository.GetResourceMarker(resourceID)
+		marker, err := repository.GetResourceMarker(tableauResourceID)
 		require.NoError(t, err)
 		assert.Equal(t, markerID, marker.MarkerID)
-		assert.Equal(t, resourceID, marker.ResourceID)
+		assert.Equal(t, baseResourceID, marker.ResourceID)
 		assert.Equal(t, siteplanID, marker.SiteplanID)
 	})
 
 	t.Run("marker not found returns siteplan ID only", func(t *testing.T) {
-		resourceID := insertTestResource(t, "Test Resource", "vehicle", 1)
-		defer cleanupResource(t, resourceID)
+		tableauResourceID := insertTestResource(t, "Test Resource", "vehicle", 1)
+		defer cleanupResource(t, tableauResourceID)
+		baseResourceID := getBaseResourceID(t, tableauResourceID)
 
 		siteplanID := setupMCPConfigWithSiteplan(t)
 
-		marker, err := repository.GetResourceMarker(resourceID)
+		marker, err := repository.GetResourceMarker(tableauResourceID)
 		require.NoError(t, err)
 		assert.Equal(t, uuid.Nil, marker.MarkerID)
-		assert.Equal(t, uuid.Nil, marker.ResourceID)
+		assert.Equal(t, baseResourceID, marker.ResourceID)
 		assert.Equal(t, siteplanID, marker.SiteplanID)
 	})
 
@@ -403,26 +418,27 @@ func TestGetResourceMarker(t *testing.T) {
 	})
 
 	t.Run("correct marker for current siteplan only", func(t *testing.T) {
-		resourceID := insertTestResource(t, "Test Resource", "vehicle", 1)
-		defer cleanupResource(t, resourceID)
+		tableauResourceID := insertTestResource(t, "Test Resource", "vehicle", 1)
+		defer cleanupResource(t, tableauResourceID)
+		baseResourceID := getBaseResourceID(t, tableauResourceID)
 
 		// Setup two siteplans with different markers
 		siteplan1 := setupMCPConfigWithSiteplan(t)
 		marker1 := uuid.Must(uuid.NewV4())
-		err := repository.UpdateMarkerIDForResource(resourceID, marker1)
+		err := repository.UpdateMarkerIDForResource(baseResourceID, marker1)
 		require.NoError(t, err)
 
 		siteplan2 := uuid.Must(uuid.NewV4())
 		err = repository.UpdateMCPSiteplan(siteplan2)
 		require.NoError(t, err)
 		marker2 := uuid.Must(uuid.NewV4())
-		err = repository.UpdateMarkerIDForResource(resourceID, marker2)
+		err = repository.UpdateMarkerIDForResource(baseResourceID, marker2)
 		require.NoError(t, err)
 
 		// Switch back to siteplan1 and verify we get marker1
 		err = repository.UpdateMCPSiteplan(siteplan1)
 		require.NoError(t, err)
-		result, err := repository.GetResourceMarker(resourceID)
+		result, err := repository.GetResourceMarker(tableauResourceID)
 		require.NoError(t, err)
 		assert.Equal(t, marker1, result.MarkerID)
 		assert.Equal(t, siteplan1, result.SiteplanID)
@@ -430,7 +446,7 @@ func TestGetResourceMarker(t *testing.T) {
 		// Switch to siteplan2 and verify we get marker2
 		err = repository.UpdateMCPSiteplan(siteplan2)
 		require.NoError(t, err)
-		result, err = repository.GetResourceMarker(resourceID)
+		result, err = repository.GetResourceMarker(tableauResourceID)
 		require.NoError(t, err)
 		assert.Equal(t, marker2, result.MarkerID)
 		assert.Equal(t, siteplan2, result.SiteplanID)
@@ -440,20 +456,37 @@ func TestGetResourceMarker(t *testing.T) {
 		// Clean up any existing MCP config from previous tests
 		cleanupMCPConfig(t)
 
-		resourceID := insertTestResource(t, "Test Resource", "vehicle", 1)
-		defer cleanupResource(t, resourceID)
+		tableauResourceID := insertTestResource(t, "Test Resource", "vehicle", 1)
+		defer cleanupResource(t, tableauResourceID)
 
 		// Don't setup MCP config
-		_, err := repository.GetResourceMarker(resourceID)
+		_, err := repository.GetResourceMarker(tableauResourceID)
 		// Should error because mcp_config doesn't exist or has NULL siteplan_id
 		assert.Error(t, err)
 	})
 }
 
 // Helper to cleanup test resources
-func cleanupResource(t *testing.T, resourceID uuid.UUID) {
-	SQL := `DELETE FROM resources WHERE resource_id = $1`
-	_, err := repository.DBConnPool.Exec(context.Background(), SQL, resourceID)
+func cleanupResource(t *testing.T, tableauResourceID uuid.UUID) {
+	// First get the resource_id from tableau_resources
+	var resourceID uuid.UUID
+	SQL1 := `SELECT resource_id FROM tableau_resources WHERE tableau_resource_id = $1`
+	err := repository.DBConnPool.QueryRow(context.Background(), SQL1, tableauResourceID).Scan(&resourceID)
+	if err != nil {
+		t.Logf("Failed to get resource_id for tableau_resource %s: %v", tableauResourceID, err)
+		return
+	}
+
+	// Delete tableau_resource first (due to foreign key)
+	SQL2 := `DELETE FROM tableau_resources WHERE tableau_resource_id = $1`
+	_, err = repository.DBConnPool.Exec(context.Background(), SQL2, tableauResourceID)
+	if err != nil {
+		t.Logf("Failed to cleanup tableau_resource %s: %v", tableauResourceID, err)
+	}
+
+	// Then delete the base resource
+	SQL3 := `DELETE FROM resources WHERE resource_id = $1`
+	_, err = repository.DBConnPool.Exec(context.Background(), SQL3, resourceID)
 	if err != nil {
 		t.Logf("Failed to cleanup resource %s: %v", resourceID, err)
 	}
