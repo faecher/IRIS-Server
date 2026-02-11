@@ -44,34 +44,34 @@ func listTrackers(c *gin.Context) {
 // @Description Assigns a resource to a tracker.
 // @Tags trackers
 // @Param tracker_id path string true "Tracker UUID"
-// @Param resource_id path string true "Resource UUID"
+// @Param tableau_resource_id path string true "Tableau Resource UUID"
 // @Success 200 "Assignment updated successfully"
-// @Failure 400 {object} map[string]string "Invalid tracker or resource ID"
-// @Failure 404 {object} map[string]string "Tracker or resource not found"
+// @Failure 400 {object} map[string]string "Invalid tracker or tableau resource ID"
+// @Failure 404 {object} map[string]string "Tracker or tableau resource not found"
 // @Failure 500 {object} map[string]string "Failed to update assignment"
-// @Router /tracker/assign/{tracker_id}/{resource_id} [post]
+// @Router /tracker/assign/{tracker_id}/{tableau_resource_id} [post]
 func assignResourceToTracker(c *gin.Context) {
 	trackerID, err := parseAndVerifyTrackerID(c)
 	if err != nil {
 		return
 	}
 
-	// parse resource id
-	resourceID, err := uuid.FromString(c.Param("resource_id"))
+	// parse tableau resource id
+	tableauResourceID, err := uuid.FromString(c.Param("tableau_resource_id"))
 	if err != nil {
-		// resource id provided but invalid
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid resource id"})
+		// tableau resource id provided but invalid
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid tableau resource id"})
 		return
 	}
 
 	// assign resource
-	_, err = repository.GetResourceByID(resourceID)
+	_, err = repository.GetResourceByID(tableauResourceID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Resource not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Tableau resource not found"})
 		return
 	}
 
-	err = repository.UpdateTrackerResource(trackerID, resourceID)
+	err = repository.UpdateTrackerResource(trackerID, tableauResourceID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update tracker resource assignment"})
 		return

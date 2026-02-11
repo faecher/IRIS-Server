@@ -21,7 +21,7 @@ func ResourcesHandler(router *gin.Engine) {
 // @Description Returns a list of all resources from the MCP system
 // @Tags resources
 // @Produce json
-// @Success 200 {array} models.Resource "List of resources"
+// @Success 200 {array} models.TableauResource "List of Tableau resources"
 // @Failure 500 {object} map[string]string "Failed to fetch resources"
 // @Router /resources/ [get]
 func listResources(c *gin.Context) {

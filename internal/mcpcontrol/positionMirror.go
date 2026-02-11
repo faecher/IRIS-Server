@@ -110,7 +110,7 @@ func createNewMarkerInMCP(body io.ReadCloser, tracker *models.BaseTracker) error
 		return fmt.Errorf("failed to parse marker ID: %w", err)
 	}
 
-	err = repository.UpdateMarkerIDForResource(tracker.TableauResource.ID, markerID)
+	err = repository.UpdateMarkerIDForResource(tracker.TableauResource.Resource.ID, markerID)
 	if err != nil {
 		return fmt.Errorf("failed to update marker ID for resource: %w", err)
 	}
