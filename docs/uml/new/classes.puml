@@ -6,21 +6,22 @@ package internal {
 package models {
 	interface Tracker {
 		GetPosition() Position
-		GetLastUpdate() DateTime
+		GetLastUpdate() time.Time
 		GetBattery() int16
 	}
 
 	struct Position {
-		+ Long: double
-		+ Lat: double
+		+ Longitude: float64
+		+ Latitude: float64
 	}
 
 	struct BaseTracker {
 		+ Position
+		+ TableauResource: *TableauResource
 		+ ID: UUID
 		+ Name: string
 		+ Battery: int16
-		+ LastUpdate: DateTime
+		+ LastUpdate: time.Time
 	}
 
 	Tracker <|.. BaseTracker : implements
@@ -30,47 +31,70 @@ package models {
 		+ DevEUI: string
 	}
 	
-
 	struct TetraTracker {
 		BaseTracker
 		+ ISSI: string
 	}
 	note bottom of TetraTracker 
-	TETRA support planned for future,
-	Not yet implemented.
+		TETRA support ready for integration
 	end note
 
-	BaseTracker <|.. ChirpstackTracker : extends
-	BaseTracker <|.. TetraTracker : extends
-
+	BaseTracker <|-- ChirpstackTracker : extends
+	BaseTracker <|-- TetraTracker : extends
 
 	struct Resource {
 		+ ID: UUID
 		+ Name: string
 		+ Type: string
+	}
+
+	struct TableauResource {
+		+ ID: UUID
+		+ OperationID: UUID
+		+ Resource: Resource
 		+ Status: uint16
 	}
 
-	BaseTracker "*" - "1" Resource : belongs to
-}
+	struct ResourceMarker {
+		+ ResourceID: UUID
+		+ MarkerID: UUID
+		+ SiteplanID: UUID
+	}
 
-package config {
+	BaseTracker "1" - TableauResource : has
+	ResourceMarker -- TableauResource : references
+	TableauResource "1" - "1" Resource : references
+
 	struct MCPConfig {
-		+ ServerURL: string
-		+ APIToken: string
-		+ OperationUID: string
+		+ Enabled: bool
+		+ URL: string
+		+ APIKey: string
+		+ OperationID: *UUID
+		+ SiteplanID: *UUID
 	}
 
-	struct SQLConfig {
-		+ Host: string
-		+ Port: uint16
-		+ User: string
-		+ Password: string
-		+ DBName: string
+	struct MCPOperation {
+		+ ID: UUID
+		+ Name: string
+		+ Active: bool
+		+ Archived: bool
+		+ Place: *MCPPlace
 	}
-}
-}
 
+	struct MCPSiteplan {
+		+ ID: UUID
+		+ Name: string
+	}
+
+	struct MCPPlace {
+		+ ID: UUID
+		+ Name: string
+	}
+
+	MCPOperation "1" -- "1" MCPPlace : has location
+	MCPConfig "1" -- "0..1" MCPOperation : configured for
+	MCPConfig "1" -- "0..1" MCPSiteplan : configured for
+}
+}
 
 @enduml
-
