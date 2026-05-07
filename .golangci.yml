@@ -84,6 +84,11 @@ linters:
       statements: 40
       lines: 80
 
+    goconst:
+      ignore-string-values:
+        - 'error'
+        - 'status'
+
 
 run:
   tests: false
