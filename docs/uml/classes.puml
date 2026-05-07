@@ -1,0 +1,100 @@
+@startuml Models
+
+!theme crt-green
+
+package internal {
+package models {
+	interface Tracker {
+		GetPosition() Position
+		GetLastUpdate() time.Time
+		GetBattery() int16
+	}
+
+	struct Position {
+		+ Longitude: float64
+		+ Latitude: float64
+	}
+
+	struct BaseTracker {
+		+ Position
+		+ TableauResource: *TableauResource
+		+ ID: UUID
+		+ Name: string
+		+ Battery: int16
+		+ LastUpdate: time.Time
+	}
+
+	Tracker <|.. BaseTracker : implements
+
+	struct ChirpstackTracker {
+		BaseTracker
+		+ DevEUI: string
+	}
+	
+	struct TetraTracker {
+		BaseTracker
+		+ ISSI: string
+	}
+	note bottom of TetraTracker 
+		TETRA support ready for integration
+	end note
+
+	BaseTracker <|-- ChirpstackTracker : extends
+	BaseTracker <|-- TetraTracker : extends
+
+	struct Resource {
+		+ ID: UUID
+		+ Name: string
+		+ Type: string
+	}
+
+	struct TableauResource {
+		+ ID: UUID
+		+ OperationID: UUID
+		+ Resource: Resource
+		+ Status: uint16
+	}
+
+	struct ResourceMarker {
+		+ ResourceID: UUID
+		+ MarkerID: UUID
+		+ SiteplanID: UUID
+	}
+
+	BaseTracker "1" - TableauResource : has
+	ResourceMarker -- TableauResource : references
+	TableauResource "1" - "1" Resource : references
+
+	struct MCPConfig {
+		+ Enabled: bool
+		+ URL: string
+		+ APIKey: string
+		+ OperationID: *UUID
+		+ SiteplanID: *UUID
+	}
+
+	struct MCPOperation {
+		+ ID: UUID
+		+ Name: string
+		+ Active: bool
+		+ Archived: bool
+		+ Place: *MCPPlace
+	}
+
+	struct MCPSiteplan {
+		+ ID: UUID
+		+ Name: string
+	}
+
+	struct MCPPlace {
+		+ ID: UUID
+		+ Name: string
+	}
+
+	MCPOperation "1" -- "1" MCPPlace : has location
+	MCPConfig "1" -- "0..1" MCPOperation : configured for
+	MCPConfig "1" -- "0..1" MCPSiteplan : configured for
+}
+}
+
+@enduml

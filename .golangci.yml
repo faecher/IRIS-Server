@@ -1,0 +1,116 @@
+version: "2"
+linters:
+  default: all
+  # enable:
+  # - wsl_v5
+  disable:
+  - wsl_v5
+  - wsl
+  - nlreturn
+  - exhaustruct
+  - tagliatelle
+  - godot
+  - paralleltest
+  - gochecknoglobals
+
+  exclusions:
+    rules:
+    # - source: "time = defaultTime"
+    #   linters:
+    #     - staticcheck
+    #     - wastedassign
+    # - source: "MCPConfig"
+    #   linters:
+    #     - gochecknoglobals
+    # - source: "DBConnPool"
+    #   linters:
+    #     - gochecknoglobals
+    - path: "docs/"
+      linters:
+        - lll
+        - gochecknoinits
+        - gochecknoglobals
+
+  settings:
+    depguard:
+      rules:
+        main:
+          list-mode: lax
+          files:
+          - $all
+          allow:
+          - $gostd
+
+    wsl_v5:
+      disable:
+        - assign
+        - decl
+        - expr
+        - if
+
+    staticcheck:
+      checks:
+        - all
+        - -QF1008
+        - -ST1003
+     
+    lll:
+      line-length: 140
+
+    # cyclop:
+    #   max-complexity: 12
+
+    errcheck:
+      exclude-functions:
+        - (io.Closer).Close
+
+    varnamelen:
+      ignore-names:
+      - c
+      - i
+      - id
+      - ok
+
+    mnd:
+      ignored-numbers:
+      - '100'
+      - '2'
+      - '10'
+
+    # nestif:
+    #   min-complexity: 6
+
+    funlen:
+      statements: 40
+      lines: 80
+
+    goconst:
+      ignore-string-values:
+        - 'error'
+        - 'status'
+
+
+run:
+  tests: false
+
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+severity:
+  default: '@linter'
+
+  rules:
+    # Ignore certain non-critical issues
+    - linters: 
+      - wsl_v5
+      - varnamelen
+      - tparallel
+      - paralleltest
+      - nonamedreturns
+      - godox
+      - gochecknoglobals
+      - gochecknoinits
+      - nilnil
+      severity: warning

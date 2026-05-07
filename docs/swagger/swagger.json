@@ -1,0 +1,760 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "Tracker and MCP integration",
+        "title": "IRIS-Server",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "0.0.0.0:8080",
+    "basePath": "/",
+    "paths": {
+        "/chirpstackGateway/data": {
+            "post": {
+                "description": "Receives uplink events from Chirpstack HTTP integration, parses tracker data, and updates database and MCP",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "gateway"
+                ],
+                "summary": "Chirpstack webhook endpoint",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Event type (must be 'up')",
+                        "name": "event",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "description": "Chirpstack uplink event payload",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Event processed successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Unsupported event type, invalid JSON, or missing DevEUI",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Database or MCP update error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/mcp/config": {
+            "get": {
+                "description": "Returns the current MCP configuration (including sensitive data like full API key)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "Get MCP configuration",
+                "responses": {
+                    "200": {
+                        "description": "Current MCP configuration",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "api_key": {
+                                    "type": "string"
+                                },
+                                "enabled": {
+                                    "type": "boolean"
+                                },
+                                "operation_id": {
+                                    "type": "string"
+                                },
+                                "siteplan_id": {
+                                    "type": "string"
+                                },
+                                "url": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to fetch configuration",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/mcp/operations": {
+            "get": {
+                "description": "Fetches all active operations from the MCP API",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "Get MCP operations",
+                "responses": {
+                    "200": {
+                        "description": "List of active operations",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.MCPOperation"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to fetch MCP operations",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/mcp/operations/set/{id}": {
+            "post": {
+                "description": "Validates and selects an operation from MCP. This operation will be used for subsequent siteplan selection.",
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "Select MCP operation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Operation UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operation selected successfully"
+                    },
+                    "400": {
+                        "description": "Invalid operation ID or operation not found in MCP",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to save operation",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/mcp/siteplans": {
+            "get": {
+                "description": "Fetches all siteplans for the currently selected operation from the MCP API",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "Get MCP siteplans",
+                "responses": {
+                    "200": {
+                        "description": "List of siteplans",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.MCPSiteplan"
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "No place associated with selected operation",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "428": {
+                        "description": "No operation selected",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to fetch siteplans or no operation selected",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/mcp/siteplans/set/{id}": {
+            "post": {
+                "description": "Validates and selects a siteplan from MCP. This siteplan will be used for marker operations.",
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "Select MCP siteplan",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Siteplan UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Siteplan selected successfully"
+                    },
+                    "400": {
+                        "description": "Invalid siteplan ID or siteplan not found in MCP",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to save siteplan",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/mcp/start": {
+            "post": {
+                "description": "Tests connection and saves MCP configuration (URL, API key, enabled state)",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "Configure MCP integration",
+                "parameters": [
+                    {
+                        "description": "MCP configuration",
+                        "name": "config",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.MCPConfig"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "MCP integration configured successfully"
+                    },
+                    "400": {
+                        "description": "Invalid request or MCP server not reachable",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to save configuration",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/resources/": {
+            "get": {
+                "description": "Returns a list of all resources from the MCP system",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "resources"
+                ],
+                "summary": "Get all resources",
+                "responses": {
+                    "200": {
+                        "description": "List of Tableau resources",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.TableauResource"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to fetch resources",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/system/status": {
+            "get": {
+                "description": "Returns system health information including database status, MCP connectivity, uptime, and active tracker count",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "system"
+                ],
+                "summary": "Get system status",
+                "responses": {
+                    "200": {
+                        "description": "System status information",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "active-trackers": {
+                                    "type": "integer"
+                                },
+                                "database": {
+                                    "type": "string"
+                                },
+                                "mcp": {
+                                    "type": "string"
+                                },
+                                "status": {
+                                    "type": "string"
+                                },
+                                "uptime": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to count active trackers",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/system/version": {
+            "get": {
+                "description": "Returns the current version of the IRIS-Server application",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "system"
+                ],
+                "summary": "Get application version",
+                "responses": {
+                    "200": {
+                        "description": "Application version",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "version": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tracker/": {
+            "get": {
+                "description": "Returns a list of all trackers in the system with their current status, position, and assigned resources",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "trackers"
+                ],
+                "summary": "Get all trackers",
+                "responses": {
+                    "200": {
+                        "description": "List of trackers",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.BaseTracker"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to fetch trackers",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tracker/assign/{tracker_id}": {
+            "post": {
+                "description": "Removes the resource assignment from a tracker",
+                "tags": [
+                    "trackers"
+                ],
+                "summary": "Unassign resource from tracker",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tracker UUID",
+                        "name": "tracker_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Resource unassigned successfully"
+                    },
+                    "400": {
+                        "description": "Invalid tracker ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Tracker not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to remove tracker resource assignment",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tracker/assign/{tracker_id}/{tableau_resource_id}": {
+            "post": {
+                "description": "Assigns a resource to a tracker.",
+                "tags": [
+                    "trackers"
+                ],
+                "summary": "Assign a resource to tracker",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tracker UUID",
+                        "name": "tracker_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tableau Resource UUID",
+                        "name": "tableau_resource_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Assignment updated successfully"
+                    },
+                    "400": {
+                        "description": "Invalid tracker or tableau resource ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Tracker or tableau resource not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to update assignment",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tracker/rename/{tracker_id}": {
+            "post": {
+                "description": "Updates the display name of a tracker",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "trackers"
+                ],
+                "summary": "Rename a tracker",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tracker UUID",
+                        "name": "tracker_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "New tracker name",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "newName": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Tracker renamed successfully"
+                    },
+                    "400": {
+                        "description": "Invalid tracker ID or request body",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to rename tracker",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "models.BaseTracker": {
+            "type": "object",
+            "properties": {
+                "battery": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "lastUpdate": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "position": {
+                    "$ref": "#/definitions/models.Position"
+                },
+                "resource": {
+                    "$ref": "#/definitions/models.TableauResource"
+                }
+            }
+        },
+        "models.MCPConfig": {
+            "type": "object",
+            "properties": {
+                "api_key": {
+                    "type": "string"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "operation_id": {
+                    "type": "string"
+                },
+                "siteplan_id": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.MCPOperation": {
+            "type": "object",
+            "properties": {
+                "active": {
+                    "type": "boolean"
+                },
+                "archived": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "place": {
+                    "$ref": "#/definitions/models.MCPPlace"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.MCPPlace": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.MCPSiteplan": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.Position": {
+            "type": "object",
+            "properties": {
+                "lat": {
+                    "type": "number"
+                },
+                "lon": {
+                    "type": "number"
+                }
+            }
+        },
+        "models.Resource": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.TableauResource": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "operationId": {
+                    "type": "string"
+                },
+                "resource": {
+                    "$ref": "#/definitions/models.Resource"
+                },
+                "status": {
+                    "type": "integer"
+                }
+            }
+        }
+    }
+}
