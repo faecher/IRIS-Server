@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	pgxuuid "github.com/jackc/pgx-gofrs-uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
@@ -54,6 +56,10 @@ func DatabaseSetup() (*pgxpool.Pool, *postgres.PostgresContainer) {
 	pool, err := pgxpool.New(context.Background(), connStr)
 	if err != nil {
 		panic(err)
+	}
+	pool.Config().AfterConnect = func(_ context.Context, conn *pgx.Conn) error {
+		pgxuuid.Register(conn.TypeMap())
+		return nil
 	}
 
 	// Init with the current database schema
