@@ -32,7 +32,7 @@ func UpdateMarkerInMCP(trackerID uuid.UUID) error {
 		return nil
 	}
 
-	marker, err := repository.GetResourceMarker(tracker.TableauResource.Resource.ID)
+	marker, err := repository.GetResourceMarker(tracker.TableauResource.ID)
 	if err != nil {
 		return fmt.Errorf("failed to get resource marker: %w", err)
 	}
