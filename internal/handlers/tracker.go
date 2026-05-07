@@ -16,7 +16,7 @@ func TrackerHandler(router *gin.Engine) {
 	trackerGroup := router.Group("/tracker")
 
 	trackerGroup.GET("/", listTrackers)
-	trackerGroup.POST("assign/:tracker_id/:resource_id", assignResourceToTracker)
+	trackerGroup.POST("assign/:tracker_id/:tableau_resource_id", assignResourceToTracker)
 	trackerGroup.POST("assign/:tracker_id", unassignResourceFromTracker)
 	trackerGroup.POST("rename/:tracker_id", renameTracker)
 }
