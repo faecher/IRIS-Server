@@ -16,7 +16,7 @@ The tracking server is a FastAPI-based backend application that receives GPS tra
 
 ### Component Overview
 
-![Class Diagram](../uml/out/TrackingServer.svg)
+![Class Diagram](../uml/old/out/TrackingServer.svg)
 
 ### Core Components
 
@@ -43,7 +43,7 @@ The tracking server is a FastAPI-based backend application that receives GPS tra
 - Chirpstack payload models for LoRaWAN data
 - MCP integration models
 
-![API Models](../uml/out/API%20Models.svg)
+![API Models](../uml/old/out/API%20Models.svg)
 
 **Background Tasks** (`tracking/tasks.py`)
 - Periodically syncs resources from MCP server
@@ -54,29 +54,29 @@ The tracking server is a FastAPI-based backend application that receives GPS tra
 #### 1. Tracker Data Ingestion
 Chirpstack gateway posts LoRaWAN data to `/api/gateway/data` → creates or updates tracker records with battery level and GPS coordinates
 
-![Tracker Data Upload](../uml/out/Sequence%20%20Tracker%20Data%20Upload.svg)
+![Tracker Data Upload](../uml/old/out/Sequence%20%20Tracker%20Data%20Upload.svg)
 
 #### 2. Frontend Queries
 UI requests tracker list via `/api/tracker/` → returns all trackers with optional resource assignments
 
-![Fetch Tracker List](../uml/out/Sequence%20%20Fetch%20Tracker-List.svg)
+![Fetch Tracker List](../uml/old/out/Sequence%20%20Fetch%20Tracker-List.svg)
 
 #### 3. Resource Assignment
 Frontend assigns MCP resources to trackers → ensures unique one-to-one mapping
 
-![Assign Resource](../uml/out/Sequence%20%20Assign%20Resource%20to%20Tracker.svg)
+![Assign Resource](../uml/old/out/Sequence%20%20Assign%20Resource%20to%20Tracker.svg)
 
 #### 4. MCP Integration
 Background task fetches resources from MCP server → stores/updates in local database
 
-![MCP Sync](../uml/out/Sequence%20%20MCP%20Integration%20(Scheduled%20Task).svg)
+![MCP Sync](../uml/old/out/Sequence%20%20MCP%20Integration%20(Scheduled%20Task).svg)
 
 #### 5. MCP Configuration
 Frontend configures MCP connection and enables operations
 
-![MCP Config](../uml/out/Sequence%20%20Configure%20MCP%20Integration.svg)
+![MCP Config](../uml/old/out/Sequence%20%20Configure%20MCP%20Integration.svg)
 
-![Enable Operation](../uml/out/Sequence%20%20Enable%20MCP%20Operation.svg)
+![Enable Operation](../uml/old/out/Sequence%20%20Enable%20MCP%20Operation.svg)
 
 ### Key Patterns
 
