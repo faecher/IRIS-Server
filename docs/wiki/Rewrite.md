@@ -127,8 +127,8 @@ Operation enable/disable should be handled in MCP itself. We now only select an 
 
 #### Update Logic
 - **Python:** Compares message timestamp against `lastUpdated` before applying updates
-- **Go:** Currently missing timestamp comparison (TODO in implementation)
-- **Impact:** Go version may need to add timestamp validation - is that actually a problem?
+- **Go:** Gin Chirpstack handler uses `verifyTrackerMessageFreshness` to compare incoming message timestamps against `tracker.LastUpdate` before applying updates.
+- **Impact:** Both implementations enforce timestamp freshness, reducing the risk that stale or out-of-order messages overwrite newer tracker data.
 
 ### 3.3 MCP Integration
 
