@@ -192,7 +192,7 @@ func RenameTracker(trackerID uuid.UUID, newName string) error {
 
 // UpdateTracker updates battery, position, and timestamp values for a tracker.
 // Skips battery if < 0, skips position if latitude or longitude is infinity.
-// Always updates the timestamp.
+// Always updates the timestamp if data was saved.
 func UpdateTracker(tracker models.BaseTracker) error {
 	SQLLatLong := `UPDATE trackers 
 	SET position_latitude = $1, position_longitude = $2, updated_at = $3 
