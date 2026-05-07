@@ -8,6 +8,7 @@ import (
 	"IRIS-Server/internal/handlers"
 	"IRIS-Server/internal/mcpcontrol"
 	"IRIS-Server/internal/repository"
+	"IRIS-Server/internal/traccar"
 	"context"
 	"log"
 	"log/slog"
@@ -79,6 +80,11 @@ Welcome to  ╚═╝╚═╝  ╚═╝╚═╝╚══════╝`)
 		IdleTimeout:    time.Duration(cfg.Server.IdleTimeout) * time.Minute,
 		MaxHeaderBytes: cfg.Server.MaxHeaderBytes,
 	}
+
+	// start traccar websocket listener
+	traccarCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go traccar.RunTraccarWebsocketListener(traccarCtx)
 
 	err = server.ListenAndServe()
 	if err != nil {

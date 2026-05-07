@@ -61,6 +61,11 @@ CREATE TABLE tetra_trackers (
     issi       TEXT NOT NULL UNIQUE
 );
 
+CREATE TABLE traccar_trackers (
+	tracker_id UUID PRIMARY KEY REFERENCES trackers(tracker_id) ON DELETE CASCADE,
+	traccar_id TEXT NOT NULL UNIQUE
+)
+
 -- =============================================================================
 -- MARK: Resources
 -- =============================================================================

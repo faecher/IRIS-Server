@@ -93,14 +93,17 @@ func GetAllTrackers() ([]models.Tracker, error) {
 			CASE 
 				WHEN ct.dev_eui IS NOT NULL THEN 'chirpstack'
 				WHEN tt.issi IS NOT NULL THEN 'tetra'
+				WHEN traccart.traccar_id IS NOT NULL THEN 'traccar'
 				ELSE 'unknown'
 			END as tracker_type,
 			ct.dev_eui,
 			tt.issi,
+			traccart.traccar_id,
 			tr.tableau_resource_id
 		FROM trackers t
 		LEFT JOIN chirpstack_trackers ct ON t.tracker_id = ct.tracker_id
 		LEFT JOIN tetra_trackers tt ON t.tracker_id = tt.tracker_id
+		LEFT JOIN traccar_trackers traccart ON t.tracker_id = traccart.tracker_id
 		LEFT JOIN trackers_resource tr ON t.tracker_id = tr.tracker_id
 	`
 
@@ -114,12 +117,12 @@ func GetAllTrackers() ([]models.Tracker, error) {
 	for rows.Next() {
 		var base models.BaseTracker
 		var trackerType string
-		var devEUI, issi *string
+		var devEUI, issi, traccarID *string
 		var tableauResourceID *uuid.UUID
 
 		err = rows.Scan(&base.ID, &base.Name, &base.Battery,
 			&base.Position.Longitude, &base.Position.Latitude,
-			&base.LastUpdate, &trackerType, &devEUI, &issi, &tableauResourceID)
+			&base.LastUpdate, &trackerType, &devEUI, &issi, &traccarID, &tableauResourceID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan tracker row: %w", err)
 		}
@@ -141,6 +144,11 @@ func GetAllTrackers() ([]models.Tracker, error) {
 			trackers = append(trackers, &models.TetraTracker{
 				BaseTracker: base,
 				ISSI:        *issi,
+			})
+		case "traccar":
+			trackers = append(trackers, &models.TraccarTracker{
+				BaseTracker: base,
+				TraccarID:   *traccarID,
 			})
 		default:
 			trackers = append(trackers, &base)
