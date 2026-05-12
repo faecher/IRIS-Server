@@ -82,9 +82,15 @@ Welcome to  ╚═╝╚═╝  ╚═╝╚═╝╚══════╝`)
 	}
 
 	// start traccar websocket listener
-	traccarCtx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	go traccar.RunTraccarWebsocketListener(traccarCtx)
+	if cfg.Traccar.Host != "none" {
+		slog.Info("Starting Traccar websocket listener...")
+
+		traccarCtx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		go traccar.RunTraccarWebsocketListener(traccarCtx, cfg.Traccar)
+	} else {
+		slog.Info("Traccar host not configured. Skipping Traccar websocket listener.")
+	}
 
 	err = server.ListenAndServe()
 	if err != nil {
