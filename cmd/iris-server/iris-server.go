@@ -19,6 +19,8 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
+const maxRequestBodySize = 1 << 20 // 1 MiB
+
 // @title IRIS-Server
 // @version 1.0
 // @description Tracker and MCP integration
@@ -66,10 +68,10 @@ Welcome to  ╚═╝╚═╝  ╚═╝╚═╝╚══════╝`)
 	router := gin.Default()
 	registerHandlers(router)
 
-	slog.Info("Starting web server on " + cfg.Server.Address + ":" + cfg.Server.Port + "...")
+	slog.Info("Starting web server on " + cfg.Server.Address + ":8080" + "...")
 
 	server := &http.Server{
-		Addr:           cfg.Server.Address + ":" + cfg.Server.Port,
+		Addr:           cfg.Server.Address + ":8080",
 		Handler:        router,
 		ReadTimeout:    time.Duration(cfg.Server.ReadTimeout) * time.Second,
 		WriteTimeout:   time.Duration(cfg.Server.WriteTimeout) * time.Second,
@@ -90,7 +92,16 @@ func registerHandlers(router *gin.Engine) {
 	handlers.GatewayHandler(router)
 	handlers.ResourcesHandler(router)
 
+	router.Use(bodySizeLimit(maxRequestBodySize)) // Limit request body size for all routes
+
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+}
+
+func bodySizeLimit(maxBytes int64) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxBytes)
+		c.Next()
+	}
 }
 
 // loadAndInitMCP loads MCP configuration from the database and initializes the MCP client.

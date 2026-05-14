@@ -34,7 +34,6 @@ type SQLConfig struct {
 // WebServerConfig holds the web server configuration
 type WebServerConfig struct {
 	Address string `env:"SERVER_ADDRESS" envDefault:"0.0.0.0"`
-	Port    string `env:"SERVER_PORT"    envDefault:"8080"`
 
 	ReadTimeout    int `env:"SERVER_READ_TIMEOUT"     envDefault:"10"`      // in seconds
 	WriteTimeout   int `env:"SERVER_WRITE_TIMEOUT"    envDefault:"10"`      // in seconds
