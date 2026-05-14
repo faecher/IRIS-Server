@@ -46,7 +46,7 @@ func handleChirpstackWebhook(c *gin.Context) {
 	eventType := c.Query("event")
 	if eventType != "up" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Unsupported event type"})
-		slog.Info("Received Unsupported event type", "event", eventType)
+		slog.Info("Received unsupported event type", "event", eventType)
 		return
 	}
 
@@ -111,12 +111,12 @@ func handleChirpstackWebhook(c *gin.Context) {
 func getTrackerAndEuiFromContext(c *gin.Context) (*integration.UplinkEvent, uuid.UUID, string, error) {
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON payload: " + err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body: " + err.Error()})
 		return nil, uuid.Nil, "", fmt.Errorf("read body: %w", err)
 	}
 
 	upMessage := &integration.UplinkEvent{}
-	err = protojson.Unmarshal(body, upMessage)
+	err = protojson.UnmarshalOptions{DiscardUnknown: true}.Unmarshal(body, upMessage)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid protobuf JSON payload: " + err.Error()})
 		slog.Error("Failed to bind protobuf JSON payload", "error", err)
@@ -126,7 +126,7 @@ func getTrackerAndEuiFromContext(c *gin.Context) (*integration.UplinkEvent, uuid
 	eui := upMessage.GetDeviceInfo().GetDevEui()
 	if eui == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing DevEUI in payload"})
-		slog.Error("Missing DevEUI in payload", "payload", upMessage)
+		slog.Error("Missing DevEUI in payload")
 		return upMessage, uuid.Nil, "", ErrMissingDevEUI
 	}
 
