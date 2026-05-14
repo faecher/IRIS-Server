@@ -3,9 +3,9 @@ package traccar
 import "time"
 
 type traccarMessage struct {
-	Devices   []device
-	Positions []position
-	Events    []event
+	Devices   []device   `json:"devices,omitempty"`
+	Positions []position `json:"positions,omitempty"`
+	Events    []event    `json:"events,omitempty"`
 }
 
 // commented out fields are not needed for our use case, but can be added later if needed

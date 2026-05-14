@@ -117,7 +117,8 @@ func GetAllTrackers() ([]models.Tracker, error) {
 	for rows.Next() {
 		var base models.BaseTracker
 		var trackerType string
-		var devEUI, issi, traccarID *string
+		var devEUI, issi *string
+		var traccarID *int64
 		var tableauResourceID *uuid.UUID
 
 		err = rows.Scan(&base.ID, &base.Name, &base.Battery,

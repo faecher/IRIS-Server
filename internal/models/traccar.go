@@ -6,5 +6,5 @@ package models
 type TraccarTracker struct {
 	BaseTracker
 
-	TraccarID string `db:"traccar_id" json:"traccarID"`
+	TraccarID int64 `db:"traccar_id" json:"traccarID"`
 }
