@@ -108,6 +108,7 @@ func handleChirpstackWebhook(c *gin.Context) {
 // if no tracker is found, trackerID will be uuid.Nil
 func getTrackerAndEuiFromContext(c *gin.Context) (*integration.UplinkEvent, uuid.UUID, string, error) {
 	var upMessage *integration.UplinkEvent
+	slog.Info("Received Chirpstack uplink event", "query", c.Request.URL.Query(), "payload", c.Request.Body)
 	err := c.BindJSON(&upMessage)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON payload: " + err.Error()})
