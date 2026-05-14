@@ -68,10 +68,10 @@ Welcome to  ╚═╝╚═╝  ╚═╝╚═╝╚══════╝`)
 	router := gin.Default()
 	registerHandlers(router)
 
-	slog.Info("Starting web server on " + cfg.Server.Address + ":" + cfg.Server.Port + "...")
+	slog.Info("Starting web server on " + cfg.Server.Address + ":8080" + "...")
 
 	server := &http.Server{
-		Addr:           cfg.Server.Address + ":" + cfg.Server.Port,
+		Addr:           cfg.Server.Address + ":8080",
 		Handler:        router,
 		ReadTimeout:    time.Duration(cfg.Server.ReadTimeout) * time.Second,
 		WriteTimeout:   time.Duration(cfg.Server.WriteTimeout) * time.Second,
