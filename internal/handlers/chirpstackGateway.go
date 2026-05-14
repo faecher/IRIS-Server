@@ -44,7 +44,7 @@ func handleChirpstackWebhook(c *gin.Context) {
 	eventType := c.Query("event")
 	if eventType != "up" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Unsupported event type"})
-		slog.Debug("Received Unsupported event type", "event", eventType)
+		slog.Info("Received Unsupported event type", "event", eventType)
 		return
 	}
 
