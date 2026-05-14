@@ -9,6 +9,7 @@ import (
 	"IRIS-Server/internal/repository"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"math"
 	"net/http"
@@ -16,6 +17,7 @@ import (
 	"github.com/chirpstack/chirpstack/api/go/v4/integration"
 	"github.com/gin-gonic/gin"
 	"github.com/gofrs/uuid/v5"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // ErrMissingDevEUI indicates that the DevEUI is missing in the Chirpstack payload
@@ -107,13 +109,18 @@ func handleChirpstackWebhook(c *gin.Context) {
 // This function also sets the appropriate HTTP error responses if extraction fails
 // if no tracker is found, trackerID will be uuid.Nil
 func getTrackerAndEuiFromContext(c *gin.Context) (*integration.UplinkEvent, uuid.UUID, string, error) {
-	var upMessage *integration.UplinkEvent
-	slog.Info("Received Chirpstack uplink event", "query", c.Request.URL.Query(), "payload", c.Request.Body)
-	err := c.BindJSON(&upMessage)
+	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON payload: " + err.Error()})
-		slog.Error("Failed to bind JSON payload", "error", err)
-		return upMessage, uuid.Nil, "", fmt.Errorf("invalid JSON payload: %w", err)
+		return nil, uuid.Nil, "", fmt.Errorf("read body: %w", err)
+	}
+
+	upMessage := &integration.UplinkEvent{}
+	err = protojson.Unmarshal(body, upMessage)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid protobuf JSON payload: " + err.Error()})
+		slog.Error("Failed to bind protobuf JSON payload", "error", err)
+		return upMessage, uuid.Nil, "", fmt.Errorf("invalid protobuf JSON payload: %w", err)
 	}
 
 	eui := upMessage.GetDeviceInfo().GetDevEui()
