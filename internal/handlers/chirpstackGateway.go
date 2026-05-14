@@ -111,12 +111,14 @@ func getTrackerAndEuiFromContext(c *gin.Context) (*integration.UplinkEvent, uuid
 	err := c.BindJSON(&upMessage)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON payload: " + err.Error()})
+		slog.Error("Failed to bind JSON payload", "error", err)
 		return upMessage, uuid.Nil, "", fmt.Errorf("invalid JSON payload: %w", err)
 	}
 
 	eui := upMessage.GetDeviceInfo().GetDevEui()
 	if eui == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing DevEUI in payload"})
+		slog.Error("Missing DevEUI in payload", "payload", upMessage)
 		return upMessage, uuid.Nil, "", ErrMissingDevEUI
 	}
 
