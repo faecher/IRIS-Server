@@ -21,7 +21,8 @@ jobs:
         
     - uses: actions/checkout@v3
 
-    - name: Build and push server
+    - name: Build and push server (main)
+      if: github.ref == 'refs/heads/main'
       uses: docker/build-push-action@v5
       with:
         context: .
@@ -29,3 +30,20 @@ jobs:
         tags: |
           ghcr.io/faecher/iris-server:latest
           ghcr.io/faecher/iris-server:${{ github.sha }}
+          
+    - name: Prepare non-main branch tag
+      if: github.ref != 'refs/heads/main'
+      id: non_main_tags
+      run: |
+        branch_tag="$(echo "${GITHUB_REF_NAME}" | tr '/' '-' | tr -cd '[:alnum:]_.-')"
+        echo "branch_tag=${branch_tag}" >> "$GITHUB_OUTPUT"
+        
+    - name: Build and push server (non-main)
+      if: github.ref != 'refs/heads/main'
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: |
+          ghcr.io/faecher/iris-server:${{ github.sha }}
+          ghcr.io/faecher/iris-server:${{ steps.non_main_tags.outputs.branch_tag }}
