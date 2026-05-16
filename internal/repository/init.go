@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"time"
 
 	pgxuuid "github.com/jackc/pgx-gofrs-uuid"
 	"github.com/jackc/pgx/v5"
@@ -59,6 +60,27 @@ func ConnectAndInitDatabase(config config.SQLConfig) error {
 		fmt.Fprintf(os.Stderr, "Failed to create database connection pool: %v\n", err)
 		return fmt.Errorf("failed to create database connection pool: %w", err)
 	}
+
+	DBConnPool = conn
+	retryCount := 0
+	pingErr := CheckDBConnection()
+	for pingErr != nil && (config.MaxRetries == -1 || retryCount < config.MaxRetries) {
+		slog.Error("Failed to connect to database, retrying...",
+			"error", pingErr,
+			"retryCount", retryCount,
+			"maxRetries", config.MaxRetries,
+			"waitTime", config.RetryInterval,
+		)
+		retryCount++
+
+		// Wait before retrying
+		time.Sleep(time.Second * time.Duration(config.RetryInterval))
+		pingErr = CheckDBConnection()
+	}
+	if pingErr != nil {
+		return fmt.Errorf("failed to connect to database: %w", pingErr)
+	}
+
 	slog.Info("Connected to database.")
 	conn.Config().AfterConnect = func(_ context.Context, conn *pgx.Conn) error {
 		pgxuuid.Register(conn.TypeMap())
@@ -70,7 +92,6 @@ func ConnectAndInitDatabase(config config.SQLConfig) error {
 		return fmt.Errorf("failed to check database version and initialize: %w", err)
 	}
 
-	DBConnPool = conn
 	return nil
 }
 

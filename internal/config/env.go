@@ -30,6 +30,9 @@ type SQLConfig struct {
 	PasswordFromFile string `env:"DB_PASSWORD_FROM_FILE,file"`
 	DBName           string `env:"DB_NAME"                    envDefault:"iris"`
 	SSLMode          string `env:"DB_SSLMODE"                 envDefault:"disable"`
+	MaxRetries       int    `env:"DB_MAX_RETRIES"             envDefault:"3"`
+	RetryInterval    int    `env:"DB_RETRY_INTERVAL"          envDefault:"5"` // in seconds
+
 }
 
 // WebServerConfig holds the web server configuration
