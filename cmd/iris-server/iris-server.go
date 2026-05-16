@@ -12,6 +12,7 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -46,7 +47,7 @@ Welcome to  ╚═╝╚═╝  ╚═╝╚═╝╚══════╝`)
 	err = repository.ConnectAndInitDatabase(cfg.SQL)
 	if err != nil {
 		slog.Error("Database connection and initialization failed:", "error", err)
-		return
+		os.Exit(1)
 	}
 
 	// --- MCP ---

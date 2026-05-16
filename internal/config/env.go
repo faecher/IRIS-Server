@@ -23,17 +23,21 @@ type MCPConfig struct {
 
 // SQLConfig holds the database configuration
 type SQLConfig struct {
-	Host     string `env:"DB_HOST"     envDefault:"localhost"`
-	Port     uint16 `env:"DB_PORT"     envDefault:"5432"`
-	User     string `env:"DB_USER"     envDefault:"postgres"`
-	Password string `env:"DB_PASSWORD"`
-	DBName   string `env:"DB_NAME"     envDefault:"iris"`
-	SSLMode  string `env:"DB_SSLMODE"  envDefault:"disable"`
+	Host             string `env:"DB_HOST"                    envDefault:"localhost"`
+	Port             uint16 `env:"DB_PORT"                    envDefault:"5432"`
+	User             string `env:"DB_USER"                    envDefault:"postgres"`
+	Password         string `env:"DB_PASSWORD"` // will get populated from file if unset and DB_PASSWORD_FROM_FILE is set
+	PasswordFromFile string `env:"DB_PASSWORD_FROM_FILE,file"`
+	DBName           string `env:"DB_NAME"                    envDefault:"iris"`
+	SSLMode          string `env:"DB_SSLMODE"                 envDefault:"disable"`
+	MaxRetries       int    `env:"DB_MAX_RETRIES"             envDefault:"3"`
+	RetryInterval    int    `env:"DB_RETRY_INTERVAL"          envDefault:"5"` // in seconds
+
 }
 
 // WebServerConfig holds the web server configuration
 type WebServerConfig struct {
-	Address string `env:"SERVER_ADDRESS" envDefault:"0.0.0.0"`
+	Address string `env:"SERVER_ADDRESS" envDefault:"0.0.0.0"` // port is statically set to 8080 by the server startup code
 
 	ReadTimeout    int `env:"SERVER_READ_TIMEOUT"     envDefault:"10"`      // in seconds
 	WriteTimeout   int `env:"SERVER_WRITE_TIMEOUT"    envDefault:"10"`      // in seconds
@@ -58,6 +62,10 @@ func Load() (*Config, error) {
 	err := env.Parse(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse environment variables: %w", err)
+	}
+
+	if cfg.SQL.Password == "" && cfg.SQL.PasswordFromFile != "" {
+		cfg.SQL.Password = cfg.SQL.PasswordFromFile
 	}
 	return cfg, nil
 }
