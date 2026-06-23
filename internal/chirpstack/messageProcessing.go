@@ -6,8 +6,7 @@ package chirpstack
 import (
 	"IRIS-Server/internal/models"
 	"errors"
-
-	"github.com/chirpstack/chirpstack/api/go/v4/integration"
+	"time"
 )
 
 var (
@@ -16,48 +15,15 @@ var (
 )
 
 // ParseChirpstackTrackerMessage extracts battery, position data, and timestamp from a Chirpstack uplink event
-func ParseChirpstackTrackerMessage(msg *integration.UplinkEvent, tracker *models.BaseTracker) error {
-	objectMap := msg.GetObject().AsMap()
+func ParseChirpstackTrackerMessage(msg *models.ChirpstackUplink, tracker *models.BaseTracker) error {
+	tracker.Battery = int16(msg.Object.Battery)
+	tracker.Position.Latitude = msg.Object.Latitude
+	tracker.Position.Longitude = msg.Object.Longitude
+	tracker.Name = msg.DeviceInfo.DeviceName
 
-	messages, ok := objectMap["messages"].([]any)
-	if !ok || len(messages) == 0 {
-		return ErrNoMessages
-	}
-
-	messageList, ok := messages[0].([]any)
-	if !ok || len(messageList) == 0 {
-		return ErrNoMessages
-	}
-
-	parseAllMessagesInMessageList(messageList, tracker)
 	// Extract timestamp from uplink event
-	if msg.GetTime() != nil {
-		tracker.LastUpdate = msg.GetTime().AsTime()
+	if msg.Object.Timestamp != 0 {
+		tracker.LastUpdate = time.Unix(int64(msg.Object.Timestamp), 0).UTC()
 	}
 	return nil
-}
-
-func parseAllMessagesInMessageList(messageList []any, tracker *models.BaseTracker) {
-	for _, rawMsg := range messageList {
-		msgMap, ok := rawMsg.(map[string]any)
-		if !ok {
-			continue
-		}
-
-		msgType, ok1 := msgMap["type"].(string)
-		value, ok2 := msgMap["measurementValue"].(float64)
-		if !ok1 || !ok2 {
-			continue
-		}
-
-		switch msgType {
-		case "Battery":
-			tracker.Battery = int16(value)
-		case "Latitude":
-			tracker.Position.Latitude = value
-
-		case "Longitude":
-			tracker.Position.Longitude = value
-		}
-	}
 }

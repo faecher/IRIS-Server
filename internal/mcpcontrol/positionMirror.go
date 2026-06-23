@@ -23,12 +23,14 @@ var ErrMCPRequestFailed = errors.New("MCP request failed")
 // This is done by identifying the resource the tracker belongs to and updating its position marker in MCP.
 // If no resource is found, no action is taken.
 func UpdateMarkerInMCP(trackerID uuid.UUID) error {
+	slog.Debug("Updating marker in MCP")
 	tracker, err := repository.GetTrackerByID(trackerID)
 	if err != nil {
 		return fmt.Errorf("failed to get tracker: %w", err)
 	}
 	if tracker.TableauResource == nil {
 		// No resource assigned, nothing to update
+		slog.Debug("No assigned resource", "trackerName", tracker.Name)
 		return nil
 	}
 
