@@ -47,7 +47,7 @@ func UpdateMarkerInMCP(trackerID uuid.UUID) error {
 		},
 		"id":         marker.MarkerID,
 		"icon":       "BASIC_PIN",
-		"entityType": "TEMPLATE",
+		"entityType": "SNAPSHOT",
 		"siteplanId": marker.SiteplanID,
 	}
 
