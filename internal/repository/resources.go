@@ -163,6 +163,19 @@ func GetResourceMarker(tableauResourceID uuid.UUID) (models.ResourceMarker, erro
 	return marker, nil
 }
 
+// GetTrackerCountForResource returns the number of trackers assigned to a given tableau resource
+func GetTrackerCountForResource(tableauResourceID uuid.UUID) (int, error) {
+	SQL := `SELECT COUNT(*) FROM trackers_resource WHERE tableau_resource_id = $1`
+
+	var count int
+	err := DBConnPool.QueryRow(context.Background(), SQL, tableauResourceID).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to query tracker count for resource: %w", err)
+	}
+
+	return count, nil
+}
+
 // UpsertResource creates or updates a tableau resource in the database
 func UpsertResource(resource *models.TableauResource) error {
 	// First, upsert the base resource

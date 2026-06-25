@@ -105,11 +105,27 @@ func unassignResourceFromTracker(c *gin.Context) {
 		return
 	}
 
-	err = mcpcontrol.DeleteMarkerForTracker(trackerID)
-	if err != nil {
-		slog.Error("Failed to delete marker in MCP for tracker", "trackerID", trackerID, "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to delete marker in MCP: %v", err)})
-		return
+	if mcpcontrol.MCPConfig.DeleteMarkersOnUnassign {
+		tracker, err := repository.GetTrackerByID(trackerID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get resource marker"})
+			return
+		}
+
+		count, err := repository.GetTrackerCountForResource(tracker.TableauResource.ID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get resource marker"})
+			return
+		}
+
+		if count <= 1 {
+			err = mcpcontrol.DeleteMarkerForTracker(trackerID)
+			if err != nil {
+				slog.Error("Failed to delete marker in MCP for tracker", "trackerID", trackerID, "error", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to delete marker in MCP: %v", err)})
+				return
+			}
+		}
 	}
 
 	err = repository.RemoveTrackerAssignment(trackerID)
