@@ -77,8 +77,8 @@ linters:
       - '2'
       - '10'
 
-    # nestif:
-    #   min-complexity: 6
+    nestif:
+      min-complexity: 6
 
     funlen:
       statements: 40
