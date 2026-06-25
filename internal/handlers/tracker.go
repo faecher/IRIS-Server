@@ -79,6 +79,13 @@ func assignResourceToTracker(c *gin.Context) {
 		return
 	}
 
+	err = mcpcontrol.UpdateMarkerInMCP(trackerID)
+	if err != nil {
+		slog.Error("Failed to update marker in MCP for tracker", "trackerID", trackerID, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to update marker in MCP: %v", err)})
+		return
+	}
+
 	c.Status(http.StatusOK)
 }
 
