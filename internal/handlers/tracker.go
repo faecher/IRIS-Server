@@ -3,8 +3,10 @@
 package handlers
 
 import (
+	"IRIS-Server/internal/mcpcontrol"
 	"IRIS-Server/internal/repository"
 	"fmt"
+	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -96,8 +98,16 @@ func unassignResourceFromTracker(c *gin.Context) {
 		return
 	}
 
+	err = mcpcontrol.DeleteMarkerForTracker(trackerID)
+	if err != nil {
+		slog.Error("Failed to delete marker in MCP for tracker", "trackerID", trackerID, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to delete marker in MCP: %v", err)})
+		return
+	}
+
 	err = repository.RemoveTrackerAssignment(trackerID)
 	if err != nil {
+		slog.Error("Failed to remove tracker assignment", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove tracker resource assignment"})
 		return
 	}
