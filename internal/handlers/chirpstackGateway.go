@@ -54,6 +54,10 @@ func handleChirpstackWebhook(c *gin.Context) {
 	upMessage, trackerID, eui, err := getTrackerAndEuiFromContext(c)
 	if err != nil {
 		return
+	} else if upMessage.Object.Invalid {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Unsupported message type"})
+		slog.Info("Received unsupported message type", "DevEUI", eui)
+		return
 	}
 
 	// Parse Chirpstack uplink message into tracker model

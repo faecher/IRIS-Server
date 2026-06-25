@@ -27,6 +27,7 @@ type ChirpstackData struct {
 	Battery   float64 `json:"battery"`
 	Longitude float64 `json:"longitude"`
 	Latitude  float64 `json:"latitude"`
+	Invalid   bool    `json:"unsupported,omitempty"` // default false, true if the message is unsupported
 }
 
 // NewChirpstackTracker creates a new Chirpstack tracker instance
