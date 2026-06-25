@@ -22,6 +22,8 @@ import (
 // ErrMissingDevEUI indicates that the DevEUI is missing in the Chirpstack payload
 var ErrMissingDevEUI = errors.New("missing DevEUI in payload")
 
+const statusSuccess = "success"
+
 // GatewayHandler registers all Chirpstack gateway HTTP endpoints
 func GatewayHandler(router *gin.Engine) {
 	gatewayGroup := router.Group("/chirpstackGateway")
@@ -91,20 +93,25 @@ func handleChirpstackWebhook(c *gin.Context) {
 	if trackerData.TableauResource == nil {
 		// No resource assigned, skip MCP update
 		slog.Debug("No resource assigned to tracker, skipping MCP update", "trackerID", tracker.ID, "trackerName", tracker.Name)
-		c.JSON(http.StatusOK, gin.H{"status": "success", "note": "no resource assigned, MCP update skipped"})
+		c.JSON(http.StatusOK, gin.H{"status": statusSuccess, "note": "no resource assigned, MCP update skipped"})
 		return
 	}
 
 	// Resource assigned, proceed with MCP update
 	// Update tracker marker in MCP
 	err = mcpcontrol.UpdateMarkerInMCP(tracker.ID)
+	if errors.Is(err, mcpcontrol.ErrMCPDisabled) {
+		slog.Debug("MCP is disabled, skipping update", "trackerID", tracker.ID)
+		c.JSON(http.StatusOK, gin.H{"status": statusSuccess, "note": "MCP is disabled, update skipped"})
+		return
+	}
 	if err != nil {
 		slog.Error("Failed to update tracker marker in MCP", "trackerID", tracker.ID, "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update tracker marker in MCP: " + err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "success"})
+	c.JSON(http.StatusOK, gin.H{"status": statusSuccess})
 }
 
 // getTrackerAndEuiFromContext extracts the tracker and DevEUI from the Chirpstack uplink event in the request context
