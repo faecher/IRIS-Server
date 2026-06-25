@@ -23,12 +23,14 @@ var ErrMCPRequestFailed = errors.New("MCP request failed")
 // This is done by identifying the resource the tracker belongs to and updating its position marker in MCP.
 // If no resource is found, no action is taken.
 func UpdateMarkerInMCP(trackerID uuid.UUID) error {
+	slog.Debug("Updating marker in MCP")
 	tracker, err := repository.GetTrackerByID(trackerID)
 	if err != nil {
 		return fmt.Errorf("failed to get tracker: %w", err)
 	}
 	if tracker.TableauResource == nil {
 		// No resource assigned, nothing to update
+		slog.Debug("No assigned resource", "trackerName", tracker.Name)
 		return nil
 	}
 
@@ -45,7 +47,7 @@ func UpdateMarkerInMCP(trackerID uuid.UUID) error {
 		},
 		"id":         marker.MarkerID,
 		"icon":       "BASIC_PIN",
-		"entityType": "TEMPLATE",
+		"entityType": "SNAPSHOT",
 		"siteplanId": marker.SiteplanID,
 	}
 
@@ -71,6 +73,53 @@ func UpdateMarkerInMCP(trackerID uuid.UUID) error {
 		if resp.StatusCode != http.StatusOK {
 			return ErrMCPRequestFailed
 		}
+	}
+
+	return nil
+}
+
+// DeleteMarkerForTracker removes the marker associated with a tracker from the MCP system.
+func DeleteMarkerForTracker(trackerID uuid.UUID) error {
+	tracker, err := repository.GetTrackerByID(trackerID)
+	if err != nil {
+		return fmt.Errorf("failed to get tracker: %w", err)
+	}
+	if tracker.TableauResource == nil {
+		// No resource assigned, nothing to delete
+		slog.Debug("No assigned resource", "trackerName", tracker.Name)
+		return nil
+	}
+
+	marker, err := repository.GetResourceMarker(tracker.TableauResource.ID)
+	if err != nil {
+		return fmt.Errorf("failed to get resource marker: %w", err)
+	}
+
+	if marker.MarkerID == uuid.Nil {
+		slog.Debug("No marker ID found for resource, nothing to delete", "resourceName", tracker.TableauResource.Resource.Name)
+		return nil
+	}
+
+	resp, err := mcpRequest(
+		http.MethodDelete,
+		"/api/markers/"+marker.MarkerID.String()+
+			"?siteplanId="+marker.SiteplanID.String()+
+			"&entityType=SNAPSHOT",
+		nil,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to delete marker: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNotFound {
+		respBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("%w: (%s) %s, markerID: %s", ErrMCPRequestFailed, resp.Status, string(respBody), marker.MarkerID.String())
+	}
+
+	err = repository.DeleteMarker(marker.MarkerID)
+	if err != nil {
+		return fmt.Errorf("failed to clear marker ID for resource: %w", err)
 	}
 
 	return nil

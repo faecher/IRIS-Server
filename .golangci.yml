@@ -57,8 +57,8 @@ linters:
     lll:
       line-length: 140
 
-    # cyclop:
-    #   max-complexity: 12
+    cyclop:
+      max-complexity: 11
 
     errcheck:
       exclude-functions:
@@ -77,8 +77,8 @@ linters:
       - '2'
       - '10'
 
-    # nestif:
-    #   min-complexity: 6
+    nestif:
+      min-complexity: 6
 
     funlen:
       statements: 40

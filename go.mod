@@ -4,7 +4,6 @@ go 1.25.0
 
 require (
 	github.com/caarlos0/env/v10 v10.0.0
-	github.com/chirpstack/chirpstack/api/go/v4 v4.18.0
 	github.com/gin-gonic/gin v1.12.0
 	github.com/gofrs/uuid/v5 v5.4.0
 	github.com/jackc/pgx-gofrs-uuid v0.0.0-20230224015001-1d428863c2e2
@@ -16,7 +15,6 @@ require (
 	github.com/swaggo/swag v1.16.6
 	github.com/testcontainers/testcontainers-go v0.40.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.40.0
-	google.golang.org/protobuf v1.36.11
 )
 
 require (
@@ -115,5 +113,9 @@ require (
 	golang.org/x/sys v0.44.0 // indirect
 	golang.org/x/text v0.37.0 // indirect
 	golang.org/x/tools v0.45.0 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20260427160629-7cedc36a6bc4 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260427160629-7cedc36a6bc4 // indirect
+	google.golang.org/grpc v1.81.0 // indirect
+	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

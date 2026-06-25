@@ -32,13 +32,14 @@ func CreateChirpstackTracker(tracker *models.ChirpstackTracker) error {
 
 	// Insert into trackers table first
 	_, err = transaction.Exec(context.Background(),
-		`INSERT INTO trackers (tracker_id, name, battery, position_longitude, position_latitude)
-		VALUES ($1, $2, $3, $4, $5)`,
+		`INSERT INTO trackers (tracker_id, name, battery, position_longitude, position_latitude, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6)`,
 		newID,
 		tracker.Name,
 		tracker.Battery,
 		tracker.Position.Longitude,
 		tracker.Position.Latitude,
+		tracker.LastUpdate,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to insert tracker: %w", err)

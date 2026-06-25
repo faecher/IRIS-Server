@@ -5,6 +5,7 @@ package mcpcontrol
 import (
 	"IRIS-Server/internal/config"
 	"IRIS-Server/internal/models"
+	"IRIS-Server/internal/repository"
 	"context"
 	"crypto/tls"
 	"errors"
@@ -12,6 +13,8 @@ import (
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 )
 
 var (
@@ -65,4 +68,30 @@ func mcpRequest(method, endpoint string, body io.ReadCloser) (*http.Response, er
 	}
 
 	return resp, nil
+}
+
+func mcpRequestFromEndpointWithCurrentOperation(method, endpoint string) ([]byte, error) {
+	operationID, err := repository.GetMCPOperation()
+	if errors.Is(err, pgx.ErrNoRows) || operationID == nil {
+		return nil, ErrNoOperationSelected
+	} else if err != nil {
+		return nil, fmt.Errorf("failed to get MCP operation: %w", err)
+	}
+
+	resp, err := mcpRequest(method, endpoint+"?operationId="+operationID.String(), nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to request MCP resources: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, ErrMCPRequestFailed
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read MCP resources response: %w", err)
+	}
+
+	return body, nil
 }

@@ -108,6 +108,18 @@ func UpdateMarkerIDForResource(resourceID, markerID uuid.UUID) error {
 	return nil
 }
 
+// DeleteMarker removes the association of an MCP marker ID from a resource for the current siteplan
+func DeleteMarker(markerID uuid.UUID) error {
+	SQL := `DELETE FROM resource_marker WHERE marker_id = $1`
+
+	_, err := DBConnPool.Exec(context.Background(), SQL, markerID)
+	if err != nil {
+		return fmt.Errorf("failed to delete marker: %w", err)
+	}
+
+	return nil
+}
+
 // GetResourceMarker retrieves the MCP marker information for a resource on the current siteplan
 func GetResourceMarker(tableauResourceID uuid.UUID) (models.ResourceMarker, error) {
 	var marker models.ResourceMarker
@@ -149,6 +161,19 @@ func GetResourceMarker(tableauResourceID uuid.UUID) (models.ResourceMarker, erro
 	}
 
 	return marker, nil
+}
+
+// GetTrackerCountForResource returns the number of trackers assigned to a given tableau resource
+func GetTrackerCountForResource(tableauResourceID uuid.UUID) (int, error) {
+	SQL := `SELECT COUNT(*) FROM trackers_resource WHERE tableau_resource_id = $1`
+
+	var count int
+	err := DBConnPool.QueryRow(context.Background(), SQL, tableauResourceID).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to query tracker count for resource: %w", err)
+	}
+
+	return count, nil
 }
 
 // UpsertResource creates or updates a tableau resource in the database

@@ -7,6 +7,7 @@ import (
 	"IRIS-Server/internal/mcpcontrol"
 	"IRIS-Server/internal/models"
 	"IRIS-Server/internal/repository"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -14,14 +15,14 @@ import (
 	"math"
 	"net/http"
 
-	"github.com/chirpstack/chirpstack/api/go/v4/integration"
 	"github.com/gin-gonic/gin"
 	"github.com/gofrs/uuid/v5"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // ErrMissingDevEUI indicates that the DevEUI is missing in the Chirpstack payload
 var ErrMissingDevEUI = errors.New("missing DevEUI in payload")
+
+const statusSuccess = "success"
 
 // GatewayHandler registers all Chirpstack gateway HTTP endpoints
 func GatewayHandler(router *gin.Engine) {
@@ -53,6 +54,10 @@ func handleChirpstackWebhook(c *gin.Context) {
 	upMessage, trackerID, eui, err := getTrackerAndEuiFromContext(c)
 	if err != nil {
 		return
+	} else if upMessage.Object.Invalid {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Unsupported message type"})
+		slog.Info("Received unsupported message type", "DevEUI", eui)
+		return
 	}
 
 	// Parse Chirpstack uplink message into tracker model
@@ -77,53 +82,62 @@ func handleChirpstackWebhook(c *gin.Context) {
 
 	err = updateTrackerPositionInDB(c, &tracker, eui)
 	if err != nil {
+		slog.Error("Failed to update position in DB", "error", err)
 		return
 	}
 
 	// Skip MCP update if no resource is assigned
 	trackerData, err := repository.GetTrackerByID(tracker.ID)
 	if err != nil {
+		slog.Error("Failed to get tracker after update")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get tracker: " + err.Error()})
 		return
 	}
 
 	if trackerData.TableauResource == nil {
 		// No resource assigned, skip MCP update
-		c.JSON(http.StatusOK, gin.H{"status": "success", "note": "no resource assigned, MCP update skipped"})
+		slog.Debug("No resource assigned to tracker, skipping MCP update", "trackerID", tracker.ID, "trackerName", tracker.Name)
+		c.JSON(http.StatusOK, gin.H{"status": statusSuccess, "note": "no resource assigned, MCP update skipped"})
 		return
 	}
 
 	// Resource assigned, proceed with MCP update
 	// Update tracker marker in MCP
 	err = mcpcontrol.UpdateMarkerInMCP(tracker.ID)
+	if errors.Is(err, mcpcontrol.ErrMCPDisabled) {
+		slog.Debug("MCP is disabled, skipping update", "trackerID", tracker.ID)
+		c.JSON(http.StatusOK, gin.H{"status": statusSuccess, "note": "MCP is disabled, update skipped"})
+		return
+	}
 	if err != nil {
 		slog.Error("Failed to update tracker marker in MCP", "trackerID", tracker.ID, "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update tracker marker in MCP: " + err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "success"})
+	c.JSON(http.StatusOK, gin.H{"status": statusSuccess})
 }
 
 // getTrackerAndEuiFromContext extracts the tracker and DevEUI from the Chirpstack uplink event in the request context
 // This function also sets the appropriate HTTP error responses if extraction fails
 // if no tracker is found, trackerID will be uuid.Nil
-func getTrackerAndEuiFromContext(c *gin.Context) (*integration.UplinkEvent, uuid.UUID, string, error) {
+func getTrackerAndEuiFromContext(c *gin.Context) (*models.ChirpstackUplink, uuid.UUID, string, error) {
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body: " + err.Error()})
+		slog.Error("Failed to read request body", "error", err)
 		return nil, uuid.Nil, "", fmt.Errorf("read body: %w", err)
 	}
 
-	upMessage := &integration.UplinkEvent{}
-	err = protojson.UnmarshalOptions{DiscardUnknown: true}.Unmarshal(body, upMessage)
+	upMessage := &models.ChirpstackUplink{}
+	err = json.Unmarshal(body, upMessage)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid protobuf JSON payload: " + err.Error()})
 		slog.Error("Failed to bind protobuf JSON payload", "error", err)
 		return upMessage, uuid.Nil, "", fmt.Errorf("invalid protobuf JSON payload: %w", err)
 	}
 
-	eui := upMessage.GetDeviceInfo().GetDevEui()
+	eui := upMessage.DeviceInfo.DevEui
 	if eui == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing DevEUI in payload"})
 		slog.Error("Missing DevEUI in payload")
@@ -177,6 +191,7 @@ func verifyTrackerMessageFreshness(c *gin.Context, newData *models.BaseTracker) 
 			return false
 		}
 		if !existingTracker.LastUpdate.Before(newData.LastUpdate) {
+			slog.Debug("Received outdated message", "newData", newData, "existingData", existingTracker)
 			// Existing data is newer or same, ignore this message
 			c.JSON(http.StatusOK, gin.H{"status": "ignored", "reason": "message older than existing data"})
 			return false

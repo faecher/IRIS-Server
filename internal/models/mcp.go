@@ -6,9 +6,11 @@ import "github.com/gofrs/uuid/v5"
 
 // MCPConfig represents the MCP integration configuration stored in the database
 type MCPConfig struct {
-	Enabled bool   `db:"enabled" json:"enabled"`
-	URL     string `db:"url"     json:"url"`
-	APIKey  string `db:"api_key" json:"api_key"`
+	SentNotEnabledWarning   bool   // internal flag to track if the "not enabled" warning has been logged
+	DeleteMarkersOnUnassign bool   `db:"delete_markers_on_unassign" json:"delete_markers_on_unassign"`
+	Enabled                 bool   `db:"enabled"                    json:"enabled"`
+	URL                     string `db:"url"                        json:"url"`
+	APIKey                  string `db:"api_key"                    json:"api_key"`
 
 	OperationID *uuid.UUID `db:"operation_id" json:"operation_id"`
 	SiteplanID  *uuid.UUID `db:"siteplan_id"  json:"siteplan_id"`

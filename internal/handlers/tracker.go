@@ -3,8 +3,10 @@
 package handlers
 
 import (
+	"IRIS-Server/internal/mcpcontrol"
 	"IRIS-Server/internal/repository"
 	"fmt"
+	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -77,6 +79,13 @@ func assignResourceToTracker(c *gin.Context) {
 		return
 	}
 
+	err = mcpcontrol.UpdateMarkerInMCP(trackerID)
+	if err != nil {
+		slog.Error("Failed to update marker in MCP for tracker", "trackerID", trackerID, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to update marker in MCP: %v", err)})
+		return
+	}
+
 	c.Status(http.StatusOK)
 }
 
@@ -96,8 +105,32 @@ func unassignResourceFromTracker(c *gin.Context) {
 		return
 	}
 
+	if mcpcontrol.MCPConfig.DeleteMarkersOnUnassign {
+		tracker, err := repository.GetTrackerByID(trackerID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get resource marker"})
+			return
+		}
+
+		count, err := repository.GetTrackerCountForResource(tracker.TableauResource.ID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get resource marker"})
+			return
+		}
+
+		if count <= 1 {
+			err = mcpcontrol.DeleteMarkerForTracker(trackerID)
+			if err != nil {
+				slog.Error("Failed to delete marker in MCP for tracker", "trackerID", trackerID, "error", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to delete marker in MCP: %v", err)})
+				return
+			}
+		}
+	}
+
 	err = repository.RemoveTrackerAssignment(trackerID)
 	if err != nil {
+		slog.Error("Failed to remove tracker assignment", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove tracker resource assignment"})
 		return
 	}

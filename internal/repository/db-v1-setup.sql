@@ -104,6 +104,7 @@ CREATE TRIGGER update_tableau_resources_updated_at
 CREATE TABLE mcp_config (
 	id SERIAL PRIMARY KEY,
 
+	delete_markers_on_unassign boolean NOT NULL DEFAULT FALSE,
 	enabled boolean NOT NULL DEFAULT FALSE,
 	url text NOT NULL,
 	api_key text NOT NULL,

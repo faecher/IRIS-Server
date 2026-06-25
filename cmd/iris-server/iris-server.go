@@ -121,6 +121,7 @@ func loadAndInitMCP() {
 
 	slog.Info("MCP configuration found in database, initializing MCP client...")
 	mcpcontrol.MCPConfig = mcpConfig
+	mcpcontrol.MCPConfig.SentNotEnabledWarning = false
 
 	if !mcpConfig.Enabled {
 		slog.Info("MCP integration is disabled in the configuration. Skipping connection test.")
@@ -158,7 +159,10 @@ func syncResources(ctx context.Context, interval uint16) {
 		select {
 		case <-ticker.C:
 			if !mcpcontrol.MCPConfig.Enabled {
-				slog.Info("MCP integration is disabled. Skipping resource sync.")
+				if !mcpcontrol.MCPConfig.SentNotEnabledWarning {
+					slog.Info("NOTICE: MCP integration is disabled. Skipping resource sync until enabled.")
+					mcpcontrol.MCPConfig.SentNotEnabledWarning = true
+				}
 				continue
 			}
 
