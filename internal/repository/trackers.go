@@ -159,6 +159,24 @@ func GetAllTrackers() ([]models.Tracker, error) {
 	return trackers, nil
 }
 
+// GetTrackerIDByTraccarID retrieves the tracker ID for a given Traccar ID
+func GetTrackerIDByTraccarID(traccarID int64) (uuid.UUID, error) {
+	SQL := `
+		SELECT t.tracker_id
+		FROM trackers t
+		JOIN traccar_trackers tr ON t.tracker_id = tr.tracker_id
+		WHERE tr.traccar_id = $1
+	`
+
+	var trackerID uuid.UUID
+	err := DBConnPool.QueryRow(context.Background(), SQL, traccarID).Scan(&trackerID)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("failed to query tracker ID by Traccar ID: %w", err)
+	}
+
+	return trackerID, nil
+}
+
 // UpdateTrackerResource assigns a resource to a tracker, or updates an existing assignment
 func UpdateTrackerResource(trackerID, tableauResourceID uuid.UUID) error {
 	SQL := `

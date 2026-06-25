@@ -91,7 +91,7 @@ func updateTrackers(devices []device, positions []position) {
 	for _, device := range devices {
 		slog.Debug("Traccar device update received", "device_id", device.ID, "status", device.Status)
 
-		trackerID, err := repository.GetTrackerByTraccarID(device.ID)
+		trackerID, err := repository.GetTrackerIDByTraccarID(device.ID)
 		if err != nil {
 			return
 		}
