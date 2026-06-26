@@ -46,7 +46,7 @@ func runSocketSession(ctx context.Context, conn *websocket.Conn) error {
 				return fmt.Errorf("read failed: %w", err)
 			}
 
-			err = handleTraccarMessage(payload)
+			err = handleTraccarMessage(ctx, payload)
 			if err != nil {
 				return fmt.Errorf("failed to handle traccar payload: %w", err)
 			}
@@ -74,7 +74,7 @@ func handlePingPong(ctx context.Context, pingTicker *time.Ticker, pingErr chan e
 	}
 }
 
-func handleTraccarMessage(payload []byte) error {
+func handleTraccarMessage(ctx context.Context, payload []byte) error {
 	var message traccarMessage
 
 	err := json.Unmarshal(payload, &message)
@@ -82,16 +82,16 @@ func handleTraccarMessage(payload []byte) error {
 		return fmt.Errorf("failed to parse websocket payload as traccar message: %w", err)
 	}
 
-	updateTrackers(message.Devices, message.Positions)
+	updateTrackers(ctx, message.Devices, message.Positions)
 
 	return nil
 }
 
-func updateTrackers(devices []device, positions []position) {
+func updateTrackers(ctx context.Context, devices []device, positions []position) {
 	for _, device := range devices {
 		slog.Debug("Traccar device update received", "device_id", device.ID, "status", device.Status)
 
-		trackerID, err := repository.GetTrackerIDByTraccarID(device.ID)
+		trackerID, err := repository.GetTrackerIDByTraccarID(ctx, device.ID)
 		if err != nil {
 			return
 		}

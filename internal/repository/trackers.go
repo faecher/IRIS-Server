@@ -160,7 +160,7 @@ func GetAllTrackers() ([]models.Tracker, error) {
 }
 
 // GetTrackerIDByTraccarID retrieves the tracker ID for a given Traccar ID
-func GetTrackerIDByTraccarID(traccarID int64) (uuid.UUID, error) {
+func GetTrackerIDByTraccarID(ctx context.Context, traccarID int64) (uuid.UUID, error) {
 	SQL := `
 		SELECT t.tracker_id
 		FROM trackers t
@@ -169,7 +169,7 @@ func GetTrackerIDByTraccarID(traccarID int64) (uuid.UUID, error) {
 	`
 
 	var trackerID uuid.UUID
-	err := DBConnPool.QueryRow(context.Background(), SQL, traccarID).Scan(&trackerID)
+	err := DBConnPool.QueryRow(ctx, SQL, traccarID).Scan(&trackerID)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("failed to query tracker ID by Traccar ID: %w", err)
 	}
