@@ -109,10 +109,14 @@ func getAPIBaseURL(cfg config.TraccarConfig) string {
 func getSocketURL(cfg config.TraccarConfig) string {
 	baseURL := getAPIBaseURL(cfg)
 
-	if strings.HasPrefix(baseURL, "https://") {
-		return "wss://" + strings.TrimPrefix(baseURL, "https://") + socketPath
-	} else if strings.HasPrefix(baseURL, "http://") {
-		return "ws://" + strings.TrimPrefix(baseURL, "http://") + socketPath
+	url, hashttps := strings.CutPrefix(baseURL, "https://")
+	if hashttps {
+		return "wss://" + url + socketPath
+	}
+
+	url, hashttp := strings.CutPrefix(baseURL, "http://")
+	if hashttp {
+		return "ws://" + url + socketPath
 	}
 
 	// Default to wss if no protocol is specified, but this should not happen due to getAPIBaseURL logic
