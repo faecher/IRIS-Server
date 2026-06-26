@@ -34,6 +34,7 @@ func TrackerHandler(router *gin.Engine) {
 func listTrackers(c *gin.Context) {
 	trackers, err := repository.GetAllTrackers()
 	if err != nil {
+		slog.Error("Failed to fetch trackers", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch trackers"})
 		return
 	}
