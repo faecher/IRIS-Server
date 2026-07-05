@@ -34,7 +34,7 @@ var (
 const (
 	// API paths always include base path + specific endpoint paths
 	traccarAPIBasePath = "/api"
-	sessionPath        = "/api/session"
+	sessionPath        = "/session"
 	socketPath         = "/socket"
 
 	initialBackoff = 1 * time.Second
@@ -56,7 +56,7 @@ func RunTraccarWebsocketListener(ctx context.Context, cfg config.TraccarConfig) 
 	for ctx.Err() == nil {
 		cookies, err := getSessionCookie(ctx, cfg)
 		if err != nil {
-			slog.Error("Traccar auth failed", "error", err, "retry_in", backoff)
+			slog.Error("Traccar auth failed", "error", err, "retry_in", backoff, "config", cfg, "socket_url", socketURL)
 
 			backoff, err = waitWithContext(ctx, backoff)
 			if err != nil {
