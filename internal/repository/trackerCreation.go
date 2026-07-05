@@ -30,7 +30,7 @@ func CreateChirpstackTracker(tracker *models.ChirpstackTracker) error {
 
 	newID, err := startTransactionAndInsertGenericTracker(context.Background(), transaction, tracker.BaseTracker)
 	if err != nil {
-		return fmt.Errorf("error inserting generic tracker portion for Tracca Tracker: %w", err)
+		return fmt.Errorf("error inserting generic tracker portion for Chirpstack Tracker: %w", err)
 	}
 
 	// Then insert into chirpstack_trackers table
@@ -76,7 +76,7 @@ func CreateTraccarTracker(ctx context.Context, tracker *models.TraccarTracker) e
 
 	newID, err := startTransactionAndInsertGenericTracker(ctx, transaction, tracker.BaseTracker)
 	if err != nil {
-		return fmt.Errorf("error inserting generic tracker portion for Tracca Tracker: %w", err)
+		return fmt.Errorf("error inserting generic tracker portion for Traccar Tracker: %w", err)
 	}
 
 	// Then insert into traccar_trackers table
@@ -115,11 +115,7 @@ func startTransactionAndInsertGenericTracker(ctx context.Context, transaction pg
 		tracker.LastUpdate,
 	)
 	if err != nil {
-		rollbackErr := transaction.Rollback(ctx)
-		if rollbackErr != nil && !errors.Is(rollbackErr, pgx.ErrTxClosed) {
-			slog.Error("failed to rollback transaction", "error", rollbackErr)
-		}
-		return newID, fmt.Errorf("failed to insert tracker: %w", err)
+		return uuid.Nil, fmt.Errorf("failed to insert tracker: %w", err)
 	}
 
 	return newID, nil

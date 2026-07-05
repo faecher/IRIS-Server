@@ -7,7 +7,6 @@ import (
 	"IRIS-Server/internal/mcpcontrol"
 	"IRIS-Server/internal/models"
 	"IRIS-Server/internal/repository"
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -88,7 +87,7 @@ func handleChirpstackWebhook(c *gin.Context) {
 	}
 
 	// Skip MCP update if no resource is assigned
-	trackerData, err := repository.GetTrackerByID(context.Background(), tracker.ID)
+	trackerData, err := repository.GetTrackerByID(c.Request.Context(), tracker.ID)
 	if err != nil {
 		slog.Error("Failed to get tracker after update")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get tracker: " + err.Error()})

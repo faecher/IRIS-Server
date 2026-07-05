@@ -80,8 +80,8 @@ func UpdateMarkerInMCP(ctx context.Context, trackerID uuid.UUID) error {
 }
 
 // DeleteMarkerForTracker removes the marker associated with a tracker from the MCP system.
-func DeleteMarkerForTracker(trackerID uuid.UUID) error {
-	tracker, err := repository.GetTrackerByID(context.Background(), trackerID)
+func DeleteMarkerForTracker(ctx context.Context, trackerID uuid.UUID) error {
+	tracker, err := repository.GetTrackerByID(ctx, trackerID)
 	if err != nil {
 		return fmt.Errorf("failed to get tracker: %w", err)
 	}
@@ -91,7 +91,7 @@ func DeleteMarkerForTracker(trackerID uuid.UUID) error {
 		return nil
 	}
 
-	marker, err := repository.GetResourceMarker(context.Background(), tracker.TableauResource.ID)
+	marker, err := repository.GetResourceMarker(ctx, tracker.TableauResource.ID)
 	if err != nil {
 		return fmt.Errorf("failed to get resource marker: %w", err)
 	}
@@ -102,7 +102,7 @@ func DeleteMarkerForTracker(trackerID uuid.UUID) error {
 	}
 
 	resp, err := mcpRequest(
-		context.Background(),
+		ctx,
 		http.MethodDelete,
 		"/api/markers/"+marker.MarkerID.String()+
 			"?siteplanId="+marker.SiteplanID.String()+
@@ -119,7 +119,7 @@ func DeleteMarkerForTracker(trackerID uuid.UUID) error {
 		return fmt.Errorf("%w: (%s) %s, markerID: %s", ErrMCPRequestFailed, resp.Status, string(respBody), marker.MarkerID.String())
 	}
 
-	err = repository.DeleteMarker(marker.MarkerID)
+	err = repository.DeleteMarker(ctx, marker.MarkerID)
 	if err != nil {
 		return fmt.Errorf("failed to clear marker ID for resource: %w", err)
 	}

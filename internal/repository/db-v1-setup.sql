@@ -64,7 +64,7 @@ CREATE TABLE tetra_trackers (
 CREATE TABLE traccar_trackers (
 	tracker_id UUID PRIMARY KEY REFERENCES trackers(tracker_id) ON DELETE CASCADE,
 	traccar_id BIGINT NOT NULL UNIQUE
-)
+);
 
 -- =============================================================================
 -- MARK: Resources

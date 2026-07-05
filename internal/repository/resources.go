@@ -109,10 +109,10 @@ func UpdateMarkerIDForResource(ctx context.Context, resourceID, markerID uuid.UU
 }
 
 // DeleteMarker removes the association of an MCP marker ID from a resource for the current siteplan
-func DeleteMarker(markerID uuid.UUID) error {
+func DeleteMarker(ctx context.Context, markerID uuid.UUID) error {
 	SQL := `DELETE FROM resource_marker WHERE marker_id = $1`
 
-	_, err := DBConnPool.Exec(context.Background(), SQL, markerID)
+	_, err := DBConnPool.Exec(ctx, SQL, markerID)
 	if err != nil {
 		return fmt.Errorf("failed to delete marker: %w", err)
 	}

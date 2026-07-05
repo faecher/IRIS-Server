@@ -19,10 +19,11 @@ type UpdateConfig struct {
 // The Traccar integration supports both email/password and token-based authentication. If both are provided, token-based auth will be used.
 type TraccarConfig struct {
 	// e.g. "traccar.example.com" or "https://traccar.example.com" (protocol is optional, default is https)
-	Host      string `env:"TRACCAR_HOST"       envDefault:"none"`
-	Email     string `env:"TRACCAR_EMAIL"      envDefault:""`
-	Password  string `env:"TRACCAR_PASSWORD"   envDefault:""`
-	AuthToken string `env:"TRACCAR_AUTH_TOKEN" envDefault:""`
+	Host        string `env:"TRACCAR_HOST"         envDefault:"none"`
+	Email       string `env:"TRACCAR_EMAIL"        envDefault:""`
+	Password    string `env:"TRACCAR_PASSWORD"     envDefault:""`
+	AuthToken   string `env:"TRACCAR_AUTH_TOKEN"   envDefault:""`
+	AuthTimeout int    `env:"TRACCAR_AUTH_TIMEOUT" envDefault:"10"` // in seconds
 }
 
 // MCPConfig holds the MCP integration configuration

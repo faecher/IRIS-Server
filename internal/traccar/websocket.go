@@ -56,7 +56,13 @@ func RunTraccarWebsocketListener(ctx context.Context, cfg config.TraccarConfig) 
 	for ctx.Err() == nil {
 		cookies, err := getSessionCookie(ctx, cfg)
 		if err != nil {
-			slog.Error("Traccar auth failed", "error", err, "retry_in", backoff, "config", cfg, "socket_url", socketURL)
+			slog.Error("Traccar auth failed",
+				"error", err,
+				"retry_in", backoff,
+				"host", cfg.Host,
+				"auth_method", cfg.AuthToken != "",
+				"socket_url", socketURL,
+			)
 
 			backoff, err = waitWithContext(ctx, backoff)
 			if err != nil {
@@ -125,7 +131,7 @@ func getSocketURL(cfg config.TraccarConfig) string {
 
 func getSessionCookie(ctx context.Context, cfg config.TraccarConfig) ([]*http.Cookie, error) {
 	jar, _ := cookiejar.New(nil)
-	client := &http.Client{Jar: jar}
+	client := &http.Client{Jar: jar, Timeout: time.Duration(cfg.AuthTimeout) * time.Second}
 
 	var req *http.Request
 	var err error
@@ -166,8 +172,13 @@ func getSessionCookie(ctx context.Context, cfg config.TraccarConfig) ([]*http.Co
 
 func dialWebsocket(ctx context.Context, socketURL string, cookies []*http.Cookie) (*websocket.Conn, *http.Response, error) {
 	header := http.Header{}
+	cookieHeader := make([]string, 0, len(cookies))
 	for _, cookie := range cookies {
-		header.Add("Cookie", cookie.String())
+		cookieHeader = append(cookieHeader, cookie.String())
+	}
+
+	if len(cookieHeader) > 0 {
+		header.Set("Cookie", strings.Join(cookieHeader, "; "))
 	}
 
 	dialer := websocket.Dialer{
