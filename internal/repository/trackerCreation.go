@@ -17,8 +17,6 @@ import (
 // it automatically takes the battery and position from the embedded BaseTracker.
 // the provided tracker will have its ID field updated with the new UUID.
 func CreateChirpstackTracker(tracker *models.ChirpstackTracker) error {
-	newID := uuid.Must(uuid.NewV4())
-
 	transaction, err := DBConnPool.Begin(context.Background())
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
@@ -30,19 +28,9 @@ func CreateChirpstackTracker(tracker *models.ChirpstackTracker) error {
 		}
 	}()
 
-	// Insert into trackers table first
-	_, err = transaction.Exec(context.Background(),
-		`INSERT INTO trackers (tracker_id, name, battery, position_longitude, position_latitude, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6)`,
-		newID,
-		tracker.Name,
-		tracker.Battery,
-		tracker.Position.Longitude,
-		tracker.Position.Latitude,
-		tracker.LastUpdate,
-	)
+	newID, err := startTransactionAndInsertGenericTracker(context.Background(), transaction, tracker.BaseTracker)
 	if err != nil {
-		return fmt.Errorf("failed to insert tracker: %w", err)
+		return fmt.Errorf("error inserting generic tracker portion for Chirpstack Tracker: %w", err)
 	}
 
 	// Then insert into chirpstack_trackers table
@@ -71,4 +59,64 @@ func CreateTetraTracker(tracker *models.TetraTracker) error {
 	_ = tracker
 
 	return nil
+}
+
+// CreateTraccarTracker creates a new Traccar tracker record in the database
+func CreateTraccarTracker(ctx context.Context, tracker *models.TraccarTracker) error {
+	transaction, err := DBConnPool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer func() {
+		err := transaction.Rollback(ctx)
+		if err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			slog.Error("failed to rollback transaction", "error", err)
+		}
+	}()
+
+	newID, err := startTransactionAndInsertGenericTracker(ctx, transaction, tracker.BaseTracker)
+	if err != nil {
+		return fmt.Errorf("error inserting generic tracker portion for Traccar Tracker: %w", err)
+	}
+
+	// Then insert into traccar_trackers table
+	_, err = transaction.Exec(ctx,
+		`INSERT INTO traccar_trackers (tracker_id, traccar_id)
+		VALUES ($1, $2)`,
+		newID,
+		tracker.TraccarID,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to insert traccar tracker: %w", err)
+	}
+
+	err = transaction.Commit(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	tracker.ID = newID
+
+	return nil
+}
+
+func startTransactionAndInsertGenericTracker(ctx context.Context, transaction pgx.Tx, tracker models.BaseTracker) (uuid.UUID, error) {
+	newID := uuid.Must(uuid.NewV4())
+	var err error
+
+	_, err = transaction.Exec(ctx,
+		`INSERT INTO trackers (tracker_id, name, battery, position_longitude, position_latitude, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6)`,
+		newID,
+		tracker.Name,
+		tracker.Battery,
+		tracker.Position.Longitude,
+		tracker.Position.Latitude,
+		tracker.LastUpdate,
+	)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("failed to insert tracker: %w", err)
+	}
+
+	return newID, nil
 }

@@ -8,6 +8,7 @@ import (
 	"IRIS-Server/internal/handlers"
 	"IRIS-Server/internal/mcpcontrol"
 	"IRIS-Server/internal/repository"
+	"IRIS-Server/internal/traccar"
 	"context"
 	"log"
 	"log/slog"
@@ -78,6 +79,17 @@ Welcome to  ╚═╝╚═╝  ╚═╝╚═╝╚══════╝`)
 		WriteTimeout:   time.Duration(cfg.Server.WriteTimeout) * time.Second,
 		IdleTimeout:    time.Duration(cfg.Server.IdleTimeout) * time.Minute,
 		MaxHeaderBytes: cfg.Server.MaxHeaderBytes,
+	}
+
+	// start traccar websocket listener
+	if cfg.Traccar.Host != "none" {
+		slog.Info("Starting Traccar websocket listener...")
+
+		traccarCtx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		go traccar.RunTraccarWebsocketListener(traccarCtx, cfg.Traccar)
+	} else {
+		slog.Info("Traccar host not configured. Skipping Traccar websocket listener.")
 	}
 
 	err = server.ListenAndServe()

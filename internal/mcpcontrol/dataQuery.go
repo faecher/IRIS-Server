@@ -4,6 +4,7 @@ package mcpcontrol
 
 import (
 	"IRIS-Server/internal/models"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,7 +20,7 @@ var ErrNoPlaceAssociated = errors.New("no place associated with MCP operation")
 
 // GetMCPOperations fetches all available operations from the MCP API
 func GetMCPOperations() ([]models.MCPOperation, error) {
-	resp, err := mcpRequest(http.MethodGet, "/api/operations", nil)
+	resp, err := mcpRequest(context.Background(), http.MethodGet, "/api/operations", nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to request MCP operations: %w", err)
 	}

@@ -103,7 +103,7 @@ func TestGetTrackerByID(t *testing.T) {
 		id := createTestTrackerDirect(t, "Test Tracker", 85, 52.5200, 13.4050, "TESTTRACKER001")
 		defer cleanupTracker(t, id)
 
-		tracker, err := repository.GetTrackerByID(id)
+		tracker, err := repository.GetTrackerByID(context.Background(), id)
 		require.NoError(t, err)
 		assert.NotNil(t, tracker)
 		assert.Equal(t, id, tracker.ID)
@@ -115,13 +115,13 @@ func TestGetTrackerByID(t *testing.T) {
 
 	t.Run("non-existent tracker", func(t *testing.T) {
 		nonExistentID := uuid.Must(uuid.NewV4())
-		tracker, err := repository.GetTrackerByID(nonExistentID)
+		tracker, err := repository.GetTrackerByID(context.Background(), nonExistentID)
 		assert.Error(t, err)
 		assert.Nil(t, tracker)
 	})
 
 	t.Run("nil UUID", func(t *testing.T) {
-		tracker, err := repository.GetTrackerByID(uuid.Nil)
+		tracker, err := repository.GetTrackerByID(context.Background(), uuid.Nil)
 		assert.Error(t, err)
 		assert.Nil(t, tracker)
 	})
@@ -137,7 +137,7 @@ func TestGetTrackerByID(t *testing.T) {
 		err := repository.UpdateTrackerResource(trackerID, tableauResourceID)
 		require.NoError(t, err)
 
-		tracker, err := repository.GetTrackerByID(trackerID)
+		tracker, err := repository.GetTrackerByID(context.Background(), trackerID)
 		require.NoError(t, err)
 		assert.NotNil(t, tracker)
 		require.NotNil(t, tracker.TableauResource)
@@ -149,7 +149,7 @@ func TestGetTrackerByID(t *testing.T) {
 		trackerID := createTestTrackerDirect(t, "Tracker No Resource", 70, 30.0, 40.0, "NORESOURCE0001")
 		defer cleanupTracker(t, trackerID)
 
-		tracker, err := repository.GetTrackerByID(trackerID)
+		tracker, err := repository.GetTrackerByID(context.Background(), trackerID)
 		require.NoError(t, err)
 		assert.NotNil(t, tracker)
 		assert.Nil(t, tracker.TableauResource)
@@ -159,7 +159,7 @@ func TestGetTrackerByID(t *testing.T) {
 		trackerID := createTestTrackerDirect(t, "Zero Battery", 0, 10.0, 20.0, "ZEROBATT000001")
 		defer cleanupTracker(t, trackerID)
 
-		tracker, err := repository.GetTrackerByID(trackerID)
+		tracker, err := repository.GetTrackerByID(context.Background(), trackerID)
 		require.NoError(t, err)
 		assert.Equal(t, int16(0), tracker.Battery)
 	})
@@ -168,7 +168,7 @@ func TestGetTrackerByID(t *testing.T) {
 		trackerID := createTestTrackerDirect(t, "Negative Battery", -1, 10.0, 20.0, "NEGBATT0000001")
 		defer cleanupTracker(t, trackerID)
 
-		tracker, err := repository.GetTrackerByID(trackerID)
+		tracker, err := repository.GetTrackerByID(context.Background(), trackerID)
 		require.NoError(t, err)
 		assert.Equal(t, int16(-1), tracker.Battery)
 	})
@@ -221,7 +221,7 @@ func TestUpdateTrackerResource(t *testing.T) {
 		err := repository.UpdateTrackerResource(trackerID, tableauResourceID)
 		require.NoError(t, err)
 
-		tracker, err := repository.GetTrackerByID(trackerID)
+		tracker, err := repository.GetTrackerByID(context.Background(), trackerID)
 		require.NoError(t, err)
 		require.NotNil(t, tracker.TableauResource)
 		assert.Equal(t, tableauResourceID, tracker.TableauResource.ID)
@@ -243,7 +243,7 @@ func TestUpdateTrackerResource(t *testing.T) {
 		err = repository.UpdateTrackerResource(trackerID, tableauResource2)
 		require.NoError(t, err)
 
-		tracker, err := repository.GetTrackerByID(trackerID)
+		tracker, err := repository.GetTrackerByID(context.Background(), trackerID)
 		require.NoError(t, err)
 		require.NotNil(t, tracker.TableauResource)
 		assert.Equal(t, tableauResource2, tracker.TableauResource.ID)
@@ -267,11 +267,11 @@ func TestUpdateTrackerResource(t *testing.T) {
 		assert.NoError(t, err, "Multiple trackers can share a resource")
 
 		// Verify both trackers have the same resource
-		tracker1Data, err := repository.GetTrackerByID(tracker1)
+		tracker1Data, err := repository.GetTrackerByID(context.Background(), tracker1)
 		require.NoError(t, err)
 		assert.Equal(t, tableauResourceID, tracker1Data.TableauResource.ID)
 
-		tracker2Data, err := repository.GetTrackerByID(tracker2)
+		tracker2Data, err := repository.GetTrackerByID(context.Background(), tracker2)
 		require.NoError(t, err)
 		assert.Equal(t, tableauResourceID, tracker2Data.TableauResource.ID)
 	})
@@ -319,7 +319,7 @@ func TestRemoveTrackerAssignment(t *testing.T) {
 		err = repository.RemoveTrackerAssignment(trackerID)
 		require.NoError(t, err)
 
-		tracker, err := repository.GetTrackerByID(trackerID)
+		tracker, err := repository.GetTrackerByID(context.Background(), trackerID)
 		require.NoError(t, err)
 		assert.Nil(t, tracker.TableauResource)
 	})
@@ -352,7 +352,7 @@ func TestRenameTracker(t *testing.T) {
 		err := repository.RenameTracker(trackerID, "New Name")
 		require.NoError(t, err)
 
-		tracker, err := repository.GetTrackerByID(trackerID)
+		tracker, err := repository.GetTrackerByID(context.Background(), trackerID)
 		require.NoError(t, err)
 		assert.Equal(t, "New Name", tracker.Name)
 	})
@@ -364,7 +364,7 @@ func TestRenameTracker(t *testing.T) {
 		err := repository.RenameTracker(trackerID, "")
 		require.NoError(t, err)
 
-		tracker, err := repository.GetTrackerByID(trackerID)
+		tracker, err := repository.GetTrackerByID(context.Background(), trackerID)
 		require.NoError(t, err)
 		assert.Equal(t, "", tracker.Name)
 	})
@@ -387,7 +387,7 @@ func TestRenameTracker(t *testing.T) {
 		err := repository.RenameTracker(trackerID, specialName)
 		require.NoError(t, err)
 
-		tracker, err := repository.GetTrackerByID(trackerID)
+		tracker, err := repository.GetTrackerByID(context.Background(), trackerID)
 		require.NoError(t, err)
 		assert.Contains(t, tracker.Name, "Special")
 	})
@@ -400,7 +400,7 @@ func TestRenameTracker(t *testing.T) {
 		err := repository.RenameTracker(trackerID, unicodeName)
 		require.NoError(t, err)
 
-		tracker, err := repository.GetTrackerByID(trackerID)
+		tracker, err := repository.GetTrackerByID(context.Background(), trackerID)
 		require.NoError(t, err)
 		assert.Contains(t, tracker.Name, "中文")
 	})
@@ -425,7 +425,7 @@ func TestRenameTracker(t *testing.T) {
 			err := repository.RenameTracker(trackerID, name)
 			require.NoError(t, err)
 
-			tracker, err := repository.GetTrackerByID(trackerID)
+			tracker, err := repository.GetTrackerByID(context.Background(), trackerID)
 			require.NoError(t, err)
 			assert.Equal(t, name, tracker.Name)
 		}
@@ -446,10 +446,10 @@ func TestUpdateTracker(t *testing.T) {
 			},
 		}
 
-		err := repository.UpdateTracker(tracker)
+		err := repository.UpdateTracker(context.Background(), tracker)
 		require.NoError(t, err)
 
-		saved, err := repository.GetTrackerByID(trackerID)
+		saved, err := repository.GetTrackerByID(context.Background(), trackerID)
 		require.NoError(t, err)
 		assert.Equal(t, int16(75), saved.Battery)
 		assert.Equal(t, 10.0, saved.Position.Latitude) // Position unchanged
@@ -469,10 +469,10 @@ func TestUpdateTracker(t *testing.T) {
 			},
 		}
 
-		err := repository.UpdateTracker(tracker)
+		err := repository.UpdateTracker(context.Background(), tracker)
 		require.NoError(t, err)
 
-		saved, err := repository.GetTrackerByID(trackerID)
+		saved, err := repository.GetTrackerByID(context.Background(), trackerID)
 		require.NoError(t, err)
 		assert.Equal(t, 52.5200, saved.Position.Latitude)
 		assert.Equal(t, 13.4050, saved.Position.Longitude)
@@ -492,10 +492,10 @@ func TestUpdateTracker(t *testing.T) {
 			},
 		}
 
-		err := repository.UpdateTracker(tracker)
+		err := repository.UpdateTracker(context.Background(), tracker)
 		require.NoError(t, err)
 
-		saved, err := repository.GetTrackerByID(trackerID)
+		saved, err := repository.GetTrackerByID(context.Background(), trackerID)
 		require.NoError(t, err)
 		assert.Equal(t, int16(95), saved.Battery)
 		assert.Equal(t, 45.0, saved.Position.Latitude)
@@ -515,7 +515,7 @@ func TestUpdateTracker(t *testing.T) {
 			},
 		}
 
-		err := repository.UpdateTracker(tracker)
+		err := repository.UpdateTracker(context.Background(), tracker)
 		assert.Error(t, err)
 		assert.Equal(t, repository.ErrNoDataToSave, err)
 	})
@@ -533,10 +533,10 @@ func TestUpdateTracker(t *testing.T) {
 			},
 		}
 
-		err := repository.UpdateTracker(tracker)
+		err := repository.UpdateTracker(context.Background(), tracker)
 		require.NoError(t, err)
 
-		saved, err := repository.GetTrackerByID(trackerID)
+		saved, err := repository.GetTrackerByID(context.Background(), trackerID)
 		require.NoError(t, err)
 		assert.Equal(t, int16(0), saved.Battery)
 	})
@@ -554,10 +554,10 @@ func TestUpdateTracker(t *testing.T) {
 			},
 		}
 
-		err := repository.UpdateTracker(tracker)
+		err := repository.UpdateTracker(context.Background(), tracker)
 		require.NoError(t, err)
 
-		saved, err := repository.GetTrackerByID(trackerID)
+		saved, err := repository.GetTrackerByID(context.Background(), trackerID)
 		require.NoError(t, err)
 		assert.Equal(t, -90.0, saved.Position.Latitude)
 		assert.Equal(t, 180.0, saved.Position.Longitude)
@@ -576,10 +576,10 @@ func TestUpdateTracker(t *testing.T) {
 			},
 		}
 
-		err := repository.UpdateTracker(tracker)
+		err := repository.UpdateTracker(context.Background(), tracker)
 		require.NoError(t, err)
 
-		saved, err := repository.GetTrackerByID(trackerID)
+		saved, err := repository.GetTrackerByID(context.Background(), trackerID)
 		require.NoError(t, err)
 		assert.Equal(t, 0.0, saved.Position.Latitude)
 		assert.Equal(t, 0.0, saved.Position.Longitude)
@@ -595,7 +595,7 @@ func TestUpdateTracker(t *testing.T) {
 			},
 		}
 
-		err := repository.UpdateTracker(tracker)
+		err := repository.UpdateTracker(context.Background(), tracker)
 		// Should succeed but affect 0 rows - no error returned by Exec
 		require.NoError(t, err)
 	})
@@ -613,10 +613,10 @@ func TestUpdateTracker(t *testing.T) {
 			},
 		}
 
-		err := repository.UpdateTracker(tracker)
+		err := repository.UpdateTracker(context.Background(), tracker)
 		require.NoError(t, err)
 
-		saved, err := repository.GetTrackerByID(trackerID)
+		saved, err := repository.GetTrackerByID(context.Background(), trackerID)
 		require.NoError(t, err)
 		assert.Equal(t, int16(32767), saved.Battery)
 	})
@@ -632,11 +632,11 @@ func TestUpdateTracker(t *testing.T) {
 		}
 
 		for _, update := range updates {
-			err := repository.UpdateTracker(update)
+			err := repository.UpdateTracker(context.Background(), update)
 			require.NoError(t, err)
 		}
 
-		saved, err := repository.GetTrackerByID(trackerID)
+		saved, err := repository.GetTrackerByID(context.Background(), trackerID)
 		require.NoError(t, err)
 		assert.Equal(t, int16(70), saved.Battery)
 		assert.Equal(t, 25.0, saved.Position.Latitude)
@@ -656,10 +656,10 @@ func TestUpdateTracker(t *testing.T) {
 			},
 		}
 
-		err := repository.UpdateTracker(tracker)
+		err := repository.UpdateTracker(context.Background(), tracker)
 		require.NoError(t, err)
 
-		saved, err := repository.GetTrackerByID(trackerID)
+		saved, err := repository.GetTrackerByID(context.Background(), trackerID)
 		require.NoError(t, err)
 		assert.Equal(t, int16(80), saved.Battery)
 		assert.Equal(t, 10.0, saved.Position.Latitude)  // Unchanged
