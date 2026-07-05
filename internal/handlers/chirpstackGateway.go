@@ -7,6 +7,7 @@ import (
 	"IRIS-Server/internal/mcpcontrol"
 	"IRIS-Server/internal/models"
 	"IRIS-Server/internal/repository"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -87,7 +88,7 @@ func handleChirpstackWebhook(c *gin.Context) {
 	}
 
 	// Skip MCP update if no resource is assigned
-	trackerData, err := repository.GetTrackerByID(tracker.ID)
+	trackerData, err := repository.GetTrackerByID(context.Background(), tracker.ID)
 	if err != nil {
 		slog.Error("Failed to get tracker after update")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get tracker: " + err.Error()})
@@ -103,7 +104,7 @@ func handleChirpstackWebhook(c *gin.Context) {
 
 	// Resource assigned, proceed with MCP update
 	// Update tracker marker in MCP
-	err = mcpcontrol.UpdateMarkerInMCP(tracker.ID)
+	err = mcpcontrol.UpdateMarkerInMCP(c.Request.Context(), tracker.ID)
 	if errors.Is(err, mcpcontrol.ErrMCPDisabled) {
 		slog.Debug("MCP is disabled, skipping update", "trackerID", tracker.ID)
 		c.JSON(http.StatusOK, gin.H{"status": statusSuccess, "note": "MCP is disabled, update skipped"})
@@ -174,7 +175,7 @@ func updateTrackerPositionInDB(c *gin.Context, tracker *models.BaseTracker, eui 
 	}
 
 	// Tracker known, update existing record
-	err := repository.UpdateTracker(*tracker)
+	err := repository.UpdateTracker(c.Request.Context(), *tracker)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update tracker: " + err.Error()})
 		return fmt.Errorf("failed to update tracker: %w", err)
@@ -185,7 +186,7 @@ func updateTrackerPositionInDB(c *gin.Context, tracker *models.BaseTracker, eui 
 
 func verifyTrackerMessageFreshness(c *gin.Context, newData *models.BaseTracker) bool {
 	if newData.ID != uuid.Nil && !newData.LastUpdate.IsZero() {
-		existingTracker, err := repository.GetTrackerByID(newData.ID)
+		existingTracker, err := repository.GetTrackerByID(c.Request.Context(), newData.ID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get existing tracker: " + err.Error()})
 			return false

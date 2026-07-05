@@ -61,7 +61,7 @@ func GetAllResources() ([]models.TableauResource, error) {
 }
 
 // GetResourceByID retrieves a single tableau resource by its tableau resource UUID
-func GetResourceByID(tableauResourceID uuid.UUID) (*models.TableauResource, error) {
+func GetResourceByID(ctx context.Context, tableauResourceID uuid.UUID) (*models.TableauResource, error) {
 	SQL := `
 	SELECT 
 		tr.tableau_resource_id,
@@ -76,7 +76,7 @@ func GetResourceByID(tableauResourceID uuid.UUID) (*models.TableauResource, erro
 	  AND tr.operation_id = (SELECT operation_id FROM mcp_config WHERE id = 1)`
 
 	var tableauResource models.TableauResource
-	err := DBConnPool.QueryRow(context.Background(), SQL, tableauResourceID).Scan(
+	err := DBConnPool.QueryRow(ctx, SQL, tableauResourceID).Scan(
 		&tableauResource.ID,
 		&tableauResource.OperationID,
 		&tableauResource.Status,
@@ -95,12 +95,12 @@ func GetResourceByID(tableauResourceID uuid.UUID) (*models.TableauResource, erro
 }
 
 // UpdateMarkerIDForResource associates an MCP marker ID with a resource for the current siteplan
-func UpdateMarkerIDForResource(resourceID, markerID uuid.UUID) error {
+func UpdateMarkerIDForResource(ctx context.Context, resourceID, markerID uuid.UUID) error {
 	SQL := `INSERT INTO resource_marker (marker_id, resource_id, siteplan_id) 
 	VALUES ($1, $2, (SELECT siteplan_id FROM mcp_config WHERE id = 1))
 	ON CONFLICT (resource_id, siteplan_id) DO UPDATE SET marker_id = EXCLUDED.marker_id`
 
-	_, err := DBConnPool.Exec(context.Background(), SQL, markerID, resourceID)
+	_, err := DBConnPool.Exec(ctx, SQL, markerID, resourceID)
 	if err != nil {
 		return fmt.Errorf("failed to update marker ID for resource: %w", err)
 	}
@@ -121,18 +121,18 @@ func DeleteMarker(markerID uuid.UUID) error {
 }
 
 // GetResourceMarker retrieves the MCP marker information for a resource on the current siteplan
-func GetResourceMarker(tableauResourceID uuid.UUID) (models.ResourceMarker, error) {
+func GetResourceMarker(ctx context.Context, tableauResourceID uuid.UUID) (models.ResourceMarker, error) {
 	var marker models.ResourceMarker
 
 	// First, get the base resource_id from the tableau_resource
 	var resourceID uuid.UUID
-	err := DBConnPool.QueryRow(context.Background(),
+	err := DBConnPool.QueryRow(ctx,
 		`SELECT resource_id FROM tableau_resources WHERE tableau_resource_id = $1`,
 		tableauResourceID).Scan(&resourceID)
 	if err != nil {
 		// If tableau_resource not found, just return siteplan info
 		if errors.Is(err, pgx.ErrNoRows) {
-			err = DBConnPool.QueryRow(context.Background(), `SELECT siteplan_id FROM mcp_config WHERE id = 1`).Scan(&marker.SiteplanID)
+			err = DBConnPool.QueryRow(ctx, `SELECT siteplan_id FROM mcp_config WHERE id = 1`).Scan(&marker.SiteplanID)
 			if err != nil {
 				return marker, fmt.Errorf("failed to get siteplan ID: %w", err)
 			}
@@ -145,13 +145,13 @@ func GetResourceMarker(tableauResourceID uuid.UUID) (models.ResourceMarker, erro
 	FROM resource_marker
 	WHERE resource_id = $1 AND siteplan_id = (SELECT siteplan_id FROM mcp_config WHERE id = 1)`
 
-	err = DBConnPool.QueryRow(context.Background(), SQL, resourceID).Scan(
+	err = DBConnPool.QueryRow(ctx, SQL, resourceID).Scan(
 		&marker.ResourceID,
 		&marker.MarkerID,
 		&marker.SiteplanID,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
-		err = DBConnPool.QueryRow(context.Background(), `SELECT siteplan_id FROM mcp_config WHERE id = 1`).Scan(&marker.SiteplanID)
+		err = DBConnPool.QueryRow(ctx, `SELECT siteplan_id FROM mcp_config WHERE id = 1`).Scan(&marker.SiteplanID)
 		if err != nil {
 			return marker, fmt.Errorf("failed to get siteplan ID: %w", err)
 		}

@@ -48,12 +48,12 @@ func InitMCPClient(config config.MCPConfig) {
 // with the given method, endpoint, and body.
 // It returns the HTTP response or an error.
 // BaseURL and APIKey are read from the global MCPConfig variable.
-func mcpRequest(method, endpoint string, body io.ReadCloser) (*http.Response, error) {
+func mcpRequest(ctx context.Context, method, endpoint string, body io.ReadCloser) (*http.Response, error) {
 	if !MCPConfig.Enabled {
 		return nil, ErrMCPDisabled
 	}
 
-	req, err := http.NewRequestWithContext(context.Background(), method, MCPConfig.URL+endpoint, body)
+	req, err := http.NewRequestWithContext(ctx, method, MCPConfig.URL+endpoint, body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create MCP request: %w", err)
 	}
@@ -78,7 +78,7 @@ func mcpRequestFromEndpointWithCurrentOperation(method, endpoint string) ([]byte
 		return nil, fmt.Errorf("failed to get MCP operation: %w", err)
 	}
 
-	resp, err := mcpRequest(method, endpoint+"?operationId="+operationID.String(), nil)
+	resp, err := mcpRequest(context.Background(), method, endpoint+"?operationId="+operationID.String(), nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to request MCP resources: %w", err)
 	}

@@ -117,7 +117,7 @@ func updateTrackers(ctx context.Context, devices []device, positions []position)
 			Position: devicePosition,
 		}
 
-		err = updateTrackerPositionInDB(&tracker, device.ID)
+		err = updateTrackerPositionInDB(ctx, &tracker, device.ID)
 		if err != nil {
 			return
 		}
@@ -125,7 +125,7 @@ func updateTrackers(ctx context.Context, devices []device, positions []position)
 		// TODO: this code is cloned from handlers/chirpstackGateway.go
 		// TODO: this should be a generic function that can be called from both places to avoid code duplication
 		// Skip MCP update if no resource is assigned
-		trackerData, err := repository.GetTrackerByID(tracker.ID)
+		trackerData, err := repository.GetTrackerByID(ctx, tracker.ID)
 		if err != nil {
 			// c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get tracker: " + err.Error()})
 			continue
@@ -139,7 +139,7 @@ func updateTrackers(ctx context.Context, devices []device, positions []position)
 
 		// Resource assigned, proceed with MCP update
 		// Update tracker marker in MCP
-		err = mcpcontrol.UpdateMarkerInMCP(tracker.ID)
+		err = mcpcontrol.UpdateMarkerInMCP(ctx, tracker.ID)
 		if err != nil {
 			slog.Error("Failed to update tracker marker in MCP", "trackerID", tracker.ID, "error", err)
 			// c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update tracker marker in MCP: " + err.Error()})
@@ -150,13 +150,13 @@ func updateTrackers(ctx context.Context, devices []device, positions []position)
 	}
 }
 
-func updateTrackerPositionInDB(tracker *models.BaseTracker, traccarID int64) error {
+func updateTrackerPositionInDB(ctx context.Context, tracker *models.BaseTracker, traccarID int64) error {
 	if tracker.ID == uuid.Nil { // Tracker unknown
 		chirpstackTracker := models.TraccarTracker{
 			BaseTracker: *tracker, TraccarID: traccarID,
 		}
 
-		err := repository.CreateTraccarTracker(&chirpstackTracker)
+		err := repository.CreateTraccarTracker(ctx, &chirpstackTracker)
 		if err != nil {
 			return fmt.Errorf("failed to create tracker: %w", err)
 		}
@@ -167,7 +167,7 @@ func updateTrackerPositionInDB(tracker *models.BaseTracker, traccarID int64) err
 	}
 
 	// Tracker known, update existing record
-	err := repository.UpdateTracker(*tracker)
+	err := repository.UpdateTracker(ctx, *tracker)
 	if err != nil {
 		return fmt.Errorf("failed to update tracker: %w", err)
 	}

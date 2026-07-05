@@ -5,6 +5,7 @@ package handlers
 import (
 	"IRIS-Server/internal/mcpcontrol"
 	"IRIS-Server/internal/repository"
+	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -68,7 +69,7 @@ func assignResourceToTracker(c *gin.Context) {
 	}
 
 	// assign resource
-	_, err = repository.GetResourceByID(tableauResourceID)
+	_, err = repository.GetResourceByID(context.Background(), tableauResourceID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Tableau resource not found"})
 		return
@@ -80,7 +81,7 @@ func assignResourceToTracker(c *gin.Context) {
 		return
 	}
 
-	err = mcpcontrol.UpdateMarkerInMCP(trackerID)
+	err = mcpcontrol.UpdateMarkerInMCP(c.Request.Context(), trackerID)
 	if err != nil {
 		slog.Error("Failed to update marker in MCP for tracker", "trackerID", trackerID, "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to update marker in MCP: %v", err)})
@@ -107,7 +108,7 @@ func unassignResourceFromTracker(c *gin.Context) {
 	}
 
 	if mcpcontrol.MCPConfig.DeleteMarkersOnUnassign {
-		tracker, err := repository.GetTrackerByID(trackerID)
+		tracker, err := repository.GetTrackerByID(context.Background(), trackerID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get resource marker"})
 			return
@@ -184,7 +185,7 @@ func parseAndVerifyTrackerID(c *gin.Context) (uuid.UUID, error) {
 		return uuid.Nil, fmt.Errorf("invalid tracker ID: %w", err)
 	}
 	// test if tracker exists
-	_, err = repository.GetTrackerByID(trackerID)
+	_, err = repository.GetTrackerByID(context.Background(), trackerID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Tracker not found"})
 		return uuid.Nil, fmt.Errorf("tracker not found: %w", err)

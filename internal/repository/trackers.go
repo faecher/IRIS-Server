@@ -51,7 +51,7 @@ func GetTrackerByDevEUI(devEUI string) (uuid.UUID, error) {
 }
 
 // GetTrackerByID retrieves a single tracker by UUID
-func GetTrackerByID(trackerID uuid.UUID) (*models.BaseTracker, error) {
+func GetTrackerByID(ctx context.Context, trackerID uuid.UUID) (*models.BaseTracker, error) {
 	SQL := `
 		SELECT trackers.tracker_id, name, battery, position_longitude, position_latitude, updated_at, tr.tableau_resource_id
 		FROM trackers
@@ -62,7 +62,7 @@ func GetTrackerByID(trackerID uuid.UUID) (*models.BaseTracker, error) {
 	// get base tracker info
 	var tracker models.BaseTracker
 	var tableauResourceID *uuid.UUID
-	err := DBConnPool.QueryRow(context.Background(), SQL, trackerID).Scan(
+	err := DBConnPool.QueryRow(ctx, SQL, trackerID).Scan(
 		&tracker.ID,
 		&tracker.Name,
 		&tracker.Battery,
@@ -76,7 +76,7 @@ func GetTrackerByID(trackerID uuid.UUID) (*models.BaseTracker, error) {
 	}
 
 	if tableauResourceID != nil {
-		err = fillTrackerResource(&tracker, *tableauResourceID)
+		err = fillTrackerResource(ctx, &tracker, *tableauResourceID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fill tracker resource: %w", err)
 		}
@@ -129,7 +129,7 @@ func GetAllTrackers() ([]models.Tracker, error) {
 		}
 
 		if tableauResourceID != nil {
-			err = fillTrackerResource(&base, *tableauResourceID)
+			err = fillTrackerResource(context.Background(), &base, *tableauResourceID)
 			if err != nil {
 				return nil, fmt.Errorf("failed to fill tracker resource: %w", err)
 			}
@@ -220,7 +220,7 @@ func RenameTracker(trackerID uuid.UUID, newName string) error {
 // UpdateTracker updates battery, position, and timestamp values for a tracker.
 // Skips battery if < 0, skips position if latitude or longitude is infinity.
 // Always updates the timestamp if data was saved.
-func UpdateTracker(tracker models.BaseTracker) error {
+func UpdateTracker(ctx context.Context, tracker models.BaseTracker) error {
 	SQLLatLong := `UPDATE trackers 
 	SET position_latitude = $1, position_longitude = $2, updated_at = $3 
 	WHERE tracker_id = $4`
@@ -237,7 +237,7 @@ func UpdateTracker(tracker models.BaseTracker) error {
 	}
 
 	if batteryUpdate {
-		_, err := DBConnPool.Exec(context.Background(), SQLBatt,
+		_, err := DBConnPool.Exec(ctx, SQLBatt,
 			tracker.Battery, tracker.LastUpdate, tracker.ID,
 		)
 		if err != nil {
@@ -245,7 +245,7 @@ func UpdateTracker(tracker models.BaseTracker) error {
 		}
 	}
 	if locationUpdate {
-		_, err := DBConnPool.Exec(context.Background(), SQLLatLong,
+		_, err := DBConnPool.Exec(ctx, SQLLatLong,
 			tracker.Position.Latitude, tracker.Position.Longitude, tracker.LastUpdate, tracker.ID,
 		)
 		if err != nil {
@@ -256,12 +256,12 @@ func UpdateTracker(tracker models.BaseTracker) error {
 	return nil
 }
 
-func fillTrackerResource(tracker *models.BaseTracker, tableauResourceID uuid.UUID) error {
+func fillTrackerResource(ctx context.Context, tracker *models.BaseTracker, tableauResourceID uuid.UUID) error {
 	if tableauResourceID == uuid.Nil {
 		return nil
 	}
 
-	resource, err := GetResourceByID(tableauResourceID)
+	resource, err := GetResourceByID(ctx, tableauResourceID)
 	if err != nil && !errors.Is(err, ErrNoResourceFound) {
 		return fmt.Errorf("failed to get resource by ID: %w", err)
 	}

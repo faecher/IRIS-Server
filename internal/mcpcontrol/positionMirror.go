@@ -6,6 +6,7 @@ import (
 	"IRIS-Server/internal/models"
 	"IRIS-Server/internal/repository"
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -22,9 +23,9 @@ var ErrMCPRequestFailed = errors.New("MCP request failed")
 // UpdateMarkerInMCP sends the updated tracker information to the MCP system.
 // This is done by identifying the resource the tracker belongs to and updating its position marker in MCP.
 // If no resource is found, no action is taken.
-func UpdateMarkerInMCP(trackerID uuid.UUID) error {
+func UpdateMarkerInMCP(ctx context.Context, trackerID uuid.UUID) error {
 	slog.Debug("Updating marker in MCP")
-	tracker, err := repository.GetTrackerByID(trackerID)
+	tracker, err := repository.GetTrackerByID(ctx, trackerID)
 	if err != nil {
 		return fmt.Errorf("failed to get tracker: %w", err)
 	}
@@ -34,7 +35,7 @@ func UpdateMarkerInMCP(trackerID uuid.UUID) error {
 		return nil
 	}
 
-	marker, err := repository.GetResourceMarker(tracker.TableauResource.ID)
+	marker, err := repository.GetResourceMarker(ctx, tracker.TableauResource.ID)
 	if err != nil {
 		return fmt.Errorf("failed to get resource marker: %w", err)
 	}
@@ -59,12 +60,12 @@ func UpdateMarkerInMCP(trackerID uuid.UUID) error {
 	body := io.NopCloser(bytes.NewReader(jsonData))
 
 	if marker.MarkerID == uuid.Nil { // Create new marker
-		err := createNewMarkerInMCP(body, tracker)
+		err := createNewMarkerInMCP(ctx, body, tracker)
 		if err != nil {
 			return fmt.Errorf("failed to create new marker in MCP: %w", err)
 		}
 	} else { // Update existing marker
-		resp, err := mcpRequest(http.MethodPut, "/api/markers", body)
+		resp, err := mcpRequest(ctx, http.MethodPut, "/api/markers", body)
 		if err != nil {
 			return fmt.Errorf("failed to update marker: %w", err)
 		}
@@ -80,7 +81,7 @@ func UpdateMarkerInMCP(trackerID uuid.UUID) error {
 
 // DeleteMarkerForTracker removes the marker associated with a tracker from the MCP system.
 func DeleteMarkerForTracker(trackerID uuid.UUID) error {
-	tracker, err := repository.GetTrackerByID(trackerID)
+	tracker, err := repository.GetTrackerByID(context.Background(), trackerID)
 	if err != nil {
 		return fmt.Errorf("failed to get tracker: %w", err)
 	}
@@ -90,7 +91,7 @@ func DeleteMarkerForTracker(trackerID uuid.UUID) error {
 		return nil
 	}
 
-	marker, err := repository.GetResourceMarker(tracker.TableauResource.ID)
+	marker, err := repository.GetResourceMarker(context.Background(), tracker.TableauResource.ID)
 	if err != nil {
 		return fmt.Errorf("failed to get resource marker: %w", err)
 	}
@@ -101,6 +102,7 @@ func DeleteMarkerForTracker(trackerID uuid.UUID) error {
 	}
 
 	resp, err := mcpRequest(
+		context.Background(),
 		http.MethodDelete,
 		"/api/markers/"+marker.MarkerID.String()+
 			"?siteplanId="+marker.SiteplanID.String()+
@@ -125,8 +127,8 @@ func DeleteMarkerForTracker(trackerID uuid.UUID) error {
 	return nil
 }
 
-func createNewMarkerInMCP(body io.ReadCloser, tracker *models.BaseTracker) error {
-	resp, err := mcpRequest(http.MethodPost, "/api/markers", body)
+func createNewMarkerInMCP(ctx context.Context, body io.ReadCloser, tracker *models.BaseTracker) error {
+	resp, err := mcpRequest(ctx, http.MethodPost, "/api/markers", body)
 	if err != nil {
 		return fmt.Errorf("failed to create marker: %w", err)
 	}
@@ -159,7 +161,7 @@ func createNewMarkerInMCP(body io.ReadCloser, tracker *models.BaseTracker) error
 		return fmt.Errorf("failed to parse marker ID: %w", err)
 	}
 
-	err = repository.UpdateMarkerIDForResource(tracker.TableauResource.Resource.ID, markerID)
+	err = repository.UpdateMarkerIDForResource(ctx, tracker.TableauResource.Resource.ID, markerID)
 	if err != nil {
 		return fmt.Errorf("failed to update marker ID for resource: %w", err)
 	}
