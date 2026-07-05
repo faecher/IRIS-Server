@@ -11,15 +11,24 @@ import (
 
 	"github.com/gofrs/uuid/v5"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // CreateChirpstackTracker creates a new Chirpstack tracker record in the database
 // it automatically takes the battery and position from the embedded BaseTracker.
 // the provided tracker will have its ID field updated with the new UUID.
 func CreateChirpstackTracker(tracker *models.ChirpstackTracker) error {
-	// Insert into trackers table first
-	transaction, newID, err := startTransactionAndInsertGenericTracker(context.Background(), tracker.BaseTracker)
+	transaction, err := DBConnPool.Begin(context.Background())
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer func() {
+		err := transaction.Rollback(context.Background())
+		if err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			slog.Error("failed to rollback transaction", "error", err)
+		}
+	}()
+
+	newID, err := startTransactionAndInsertGenericTracker(context.Background(), transaction, tracker.BaseTracker)
 	if err != nil {
 		return fmt.Errorf("error inserting generic tracker portion for Tracca Tracker: %w", err)
 	}
@@ -54,8 +63,18 @@ func CreateTetraTracker(tracker *models.TetraTracker) error {
 
 // CreateTraccarTracker creates a new Traccar tracker record in the database
 func CreateTraccarTracker(ctx context.Context, tracker *models.TraccarTracker) error {
-	// Insert into trackers table first
-	transaction, newID, err := startTransactionAndInsertGenericTracker(ctx, tracker.BaseTracker)
+	transaction, err := DBConnPool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer func() {
+		err := transaction.Rollback(ctx)
+		if err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			slog.Error("failed to rollback transaction", "error", err)
+		}
+	}()
+
+	newID, err := startTransactionAndInsertGenericTracker(ctx, transaction, tracker.BaseTracker)
 	if err != nil {
 		return fmt.Errorf("error inserting generic tracker portion for Tracca Tracker: %w", err)
 	}
@@ -81,19 +100,9 @@ func CreateTraccarTracker(ctx context.Context, tracker *models.TraccarTracker) e
 	return nil
 }
 
-func startTransactionAndInsertGenericTracker(ctx context.Context, tracker models.BaseTracker) (*pgxpool.Tx, uuid.UUID, error) {
+func startTransactionAndInsertGenericTracker(ctx context.Context, transaction pgx.Tx, tracker models.BaseTracker) (uuid.UUID, error) {
 	newID := uuid.Must(uuid.NewV4())
-
-	transaction, err := DBConnPool.Begin(ctx)
-	if err != nil {
-		return nil, newID, fmt.Errorf("failed to begin transaction: %w", err)
-	}
-	defer func() {
-		err := transaction.Rollback(ctx)
-		if err != nil && !errors.Is(err, pgx.ErrTxClosed) {
-			slog.Error("failed to rollback transaction", "error", err)
-		}
-	}()
+	var err error
 
 	_, err = transaction.Exec(ctx,
 		`INSERT INTO trackers (tracker_id, name, battery, position_longitude, position_latitude, updated_at)
@@ -106,11 +115,12 @@ func startTransactionAndInsertGenericTracker(ctx context.Context, tracker models
 		tracker.LastUpdate,
 	)
 	if err != nil {
-		return nil, newID, fmt.Errorf("failed to insert tracker: %w", err)
+		rollbackErr := transaction.Rollback(ctx)
+		if rollbackErr != nil && !errors.Is(rollbackErr, pgx.ErrTxClosed) {
+			slog.Error("failed to rollback transaction", "error", rollbackErr)
+		}
+		return newID, fmt.Errorf("failed to insert tracker: %w", err)
 	}
 
-	// The documentation of pgxpool.Pool::Begin states it will return this type, so check should not be required
-	// We cast to avoid returning an interface
-	typedTranasaction, _ := transaction.(*pgxpool.Tx)
-	return typedTranasaction, newID, nil
+	return newID, nil
 }
