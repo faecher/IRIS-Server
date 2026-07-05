@@ -196,7 +196,7 @@ func TestGetResourceByID(t *testing.T) {
 		tableauResourceID := insertTestResource(t, "Test Vehicle", "vehicle", 1)
 		defer cleanupResource(t, tableauResourceID)
 
-		resource, err := repository.GetResourceByID(tableauResourceID)
+		resource, err := repository.GetResourceByID(context.Background(), tableauResourceID)
 		require.NoError(t, err)
 		assert.NotNil(t, resource)
 		assert.Equal(t, tableauResourceID, resource.ID)
@@ -207,13 +207,13 @@ func TestGetResourceByID(t *testing.T) {
 
 	t.Run("non-existent resource ID", func(t *testing.T) {
 		nonExistentID := uuid.Must(uuid.NewV4())
-		resource, err := repository.GetResourceByID(nonExistentID)
+		resource, err := repository.GetResourceByID(context.Background(), nonExistentID)
 		assert.Error(t, err)
 		assert.Nil(t, resource)
 	})
 
 	t.Run("nil UUID", func(t *testing.T) {
-		resource, err := repository.GetResourceByID(uuid.Nil)
+		resource, err := repository.GetResourceByID(context.Background(), uuid.Nil)
 		assert.Error(t, err)
 		assert.Nil(t, resource)
 	})
@@ -233,7 +233,7 @@ func TestGetResourceByID(t *testing.T) {
 
 		// Verify each can be retrieved individually
 		for i, id := range ids {
-			resource, err := repository.GetResourceByID(id)
+			resource, err := repository.GetResourceByID(context.Background(), id)
 			require.NoError(t, err)
 			assert.Equal(t, id, resource.ID)
 			assert.Contains(t, resource.Resource.Name, "Resource")
@@ -246,7 +246,7 @@ func TestGetResourceByID(t *testing.T) {
 		id := insertTestResource(t, "Zero Status Resource", "vehicle", 0)
 		defer cleanupResource(t, id)
 
-		resource, err := repository.GetResourceByID(id)
+		resource, err := repository.GetResourceByID(context.Background(), id)
 		require.NoError(t, err)
 		assert.Equal(t, uint16(0), resource.Status)
 	})
@@ -256,7 +256,7 @@ func TestGetResourceByID(t *testing.T) {
 		id := insertTestResource(t, "Max Status Resource", "vehicle", 32767)
 		defer cleanupResource(t, id)
 
-		resource, err := repository.GetResourceByID(id)
+		resource, err := repository.GetResourceByID(context.Background(), id)
 		require.NoError(t, err)
 		assert.Equal(t, uint16(32767), resource.Status)
 	})
@@ -271,11 +271,11 @@ func TestUpdateMarkerIDForResource(t *testing.T) {
 		siteplanID := setupMCPConfigWithSiteplan(t)
 		markerID := uuid.Must(uuid.NewV4())
 
-		err := repository.UpdateMarkerIDForResource(baseResourceID, markerID)
+		err := repository.UpdateMarkerIDForResource(context.Background(), baseResourceID, markerID)
 		require.NoError(t, err)
 
 		// Verify insertion
-		marker, err := repository.GetResourceMarker(tableauResourceID)
+		marker, err := repository.GetResourceMarker(context.Background(), tableauResourceID)
 		require.NoError(t, err)
 		assert.Equal(t, markerID, marker.MarkerID)
 		assert.Equal(t, baseResourceID, marker.ResourceID)
@@ -287,7 +287,7 @@ func TestUpdateMarkerIDForResource(t *testing.T) {
 		nonExistentResourceID := uuid.Must(uuid.NewV4())
 		markerID := uuid.Must(uuid.NewV4())
 
-		err := repository.UpdateMarkerIDForResource(nonExistentResourceID, markerID)
+		err := repository.UpdateMarkerIDForResource(context.Background(), nonExistentResourceID, markerID)
 		assert.Error(t, err) // Should fail due to foreign key constraint
 	})
 
@@ -298,7 +298,7 @@ func TestUpdateMarkerIDForResource(t *testing.T) {
 
 		setupMCPConfigWithSiteplan(t)
 
-		err := repository.UpdateMarkerIDForResource(baseResourceID, uuid.Nil)
+		err := repository.UpdateMarkerIDForResource(context.Background(), baseResourceID, uuid.Nil)
 		require.NoError(t, err)
 	})
 
@@ -306,7 +306,7 @@ func TestUpdateMarkerIDForResource(t *testing.T) {
 		setupMCPConfigWithSiteplan(t)
 		markerID := uuid.Must(uuid.NewV4())
 
-		err := repository.UpdateMarkerIDForResource(uuid.Nil, markerID)
+		err := repository.UpdateMarkerIDForResource(context.Background(), uuid.Nil, markerID)
 		assert.Error(t, err)
 	})
 
@@ -318,7 +318,7 @@ func TestUpdateMarkerIDForResource(t *testing.T) {
 		// First siteplan
 		siteplan1 := setupMCPConfigWithSiteplan(t)
 		marker1 := uuid.Must(uuid.NewV4())
-		err := repository.UpdateMarkerIDForResource(baseResourceID, marker1)
+		err := repository.UpdateMarkerIDForResource(context.Background(), baseResourceID, marker1)
 		require.NoError(t, err)
 
 		// Change to second siteplan
@@ -326,19 +326,19 @@ func TestUpdateMarkerIDForResource(t *testing.T) {
 		err = repository.UpdateMCPSiteplan(siteplan2)
 		require.NoError(t, err)
 		marker2 := uuid.Must(uuid.NewV4())
-		err = repository.UpdateMarkerIDForResource(baseResourceID, marker2)
+		err = repository.UpdateMarkerIDForResource(context.Background(), baseResourceID, marker2)
 		require.NoError(t, err)
 
 		// Verify both exist
 		err = repository.UpdateMCPSiteplan(siteplan1)
 		require.NoError(t, err)
-		result1, err := repository.GetResourceMarker(tableauResourceID)
+		result1, err := repository.GetResourceMarker(context.Background(), tableauResourceID)
 		require.NoError(t, err)
 		assert.Equal(t, marker1, result1.MarkerID)
 
 		err = repository.UpdateMCPSiteplan(siteplan2)
 		require.NoError(t, err)
-		result2, err := repository.GetResourceMarker(tableauResourceID)
+		result2, err := repository.GetResourceMarker(context.Background(), tableauResourceID)
 		require.NoError(t, err)
 		assert.Equal(t, marker2, result2.MarkerID)
 	})
@@ -353,15 +353,15 @@ func TestUpdateMarkerIDForResource(t *testing.T) {
 		markerID2 := uuid.Must(uuid.NewV4())
 
 		// Insert first marker
-		err := repository.UpdateMarkerIDForResource(baseResourceID, markerID1)
+		err := repository.UpdateMarkerIDForResource(context.Background(), baseResourceID, markerID1)
 		require.NoError(t, err)
 
 		// Update with new marker ID (upsert should succeed)
-		err = repository.UpdateMarkerIDForResource(baseResourceID, markerID2)
+		err = repository.UpdateMarkerIDForResource(context.Background(), baseResourceID, markerID2)
 		require.NoError(t, err)
 
 		// Verify the marker was updated
-		result, err := repository.GetResourceMarker(tableauResourceID)
+		result, err := repository.GetResourceMarker(context.Background(), tableauResourceID)
 		require.NoError(t, err)
 		assert.Equal(t, markerID2, result.MarkerID)
 	})
@@ -376,10 +376,10 @@ func TestGetResourceMarker(t *testing.T) {
 		siteplanID := setupMCPConfigWithSiteplan(t)
 		markerID := uuid.Must(uuid.NewV4())
 
-		err := repository.UpdateMarkerIDForResource(baseResourceID, markerID)
+		err := repository.UpdateMarkerIDForResource(context.Background(), baseResourceID, markerID)
 		require.NoError(t, err)
 
-		marker, err := repository.GetResourceMarker(tableauResourceID)
+		marker, err := repository.GetResourceMarker(context.Background(), tableauResourceID)
 		require.NoError(t, err)
 		assert.Equal(t, markerID, marker.MarkerID)
 		assert.Equal(t, baseResourceID, marker.ResourceID)
@@ -393,7 +393,7 @@ func TestGetResourceMarker(t *testing.T) {
 
 		siteplanID := setupMCPConfigWithSiteplan(t)
 
-		marker, err := repository.GetResourceMarker(tableauResourceID)
+		marker, err := repository.GetResourceMarker(context.Background(), tableauResourceID)
 		require.NoError(t, err)
 		assert.Equal(t, uuid.Nil, marker.MarkerID)
 		assert.Equal(t, baseResourceID, marker.ResourceID)
@@ -404,7 +404,7 @@ func TestGetResourceMarker(t *testing.T) {
 		setupMCPConfigWithSiteplan(t)
 		nonExistentID := uuid.Must(uuid.NewV4())
 
-		marker, err := repository.GetResourceMarker(nonExistentID)
+		marker, err := repository.GetResourceMarker(context.Background(), nonExistentID)
 		require.NoError(t, err)
 		assert.Equal(t, uuid.Nil, marker.MarkerID)
 	})
@@ -412,7 +412,7 @@ func TestGetResourceMarker(t *testing.T) {
 	t.Run("nil resource ID", func(t *testing.T) {
 		setupMCPConfigWithSiteplan(t)
 
-		marker, err := repository.GetResourceMarker(uuid.Nil)
+		marker, err := repository.GetResourceMarker(context.Background(), uuid.Nil)
 		require.NoError(t, err)
 		assert.Equal(t, uuid.Nil, marker.MarkerID)
 	})
@@ -425,20 +425,20 @@ func TestGetResourceMarker(t *testing.T) {
 		// Setup two siteplans with different markers
 		siteplan1 := setupMCPConfigWithSiteplan(t)
 		marker1 := uuid.Must(uuid.NewV4())
-		err := repository.UpdateMarkerIDForResource(baseResourceID, marker1)
+		err := repository.UpdateMarkerIDForResource(context.Background(), baseResourceID, marker1)
 		require.NoError(t, err)
 
 		siteplan2 := uuid.Must(uuid.NewV4())
 		err = repository.UpdateMCPSiteplan(siteplan2)
 		require.NoError(t, err)
 		marker2 := uuid.Must(uuid.NewV4())
-		err = repository.UpdateMarkerIDForResource(baseResourceID, marker2)
+		err = repository.UpdateMarkerIDForResource(context.Background(), baseResourceID, marker2)
 		require.NoError(t, err)
 
 		// Switch back to siteplan1 and verify we get marker1
 		err = repository.UpdateMCPSiteplan(siteplan1)
 		require.NoError(t, err)
-		result, err := repository.GetResourceMarker(tableauResourceID)
+		result, err := repository.GetResourceMarker(context.Background(), tableauResourceID)
 		require.NoError(t, err)
 		assert.Equal(t, marker1, result.MarkerID)
 		assert.Equal(t, siteplan1, result.SiteplanID)
@@ -446,7 +446,7 @@ func TestGetResourceMarker(t *testing.T) {
 		// Switch to siteplan2 and verify we get marker2
 		err = repository.UpdateMCPSiteplan(siteplan2)
 		require.NoError(t, err)
-		result, err = repository.GetResourceMarker(tableauResourceID)
+		result, err = repository.GetResourceMarker(context.Background(), tableauResourceID)
 		require.NoError(t, err)
 		assert.Equal(t, marker2, result.MarkerID)
 		assert.Equal(t, siteplan2, result.SiteplanID)
@@ -460,7 +460,7 @@ func TestGetResourceMarker(t *testing.T) {
 		defer cleanupResource(t, tableauResourceID)
 
 		// Don't setup MCP config
-		_, err := repository.GetResourceMarker(tableauResourceID)
+		_, err := repository.GetResourceMarker(context.Background(), tableauResourceID)
 		// Should error because mcp_config doesn't exist or has NULL siteplan_id
 		assert.Error(t, err)
 	})

@@ -32,7 +32,7 @@ func TestCreateChirpstackTracker(t *testing.T) {
 		defer cleanupTracker(t, tracker.ID)
 
 		// Verify tracker was created
-		saved, err := repository.GetTrackerByID(tracker.ID)
+		saved, err := repository.GetTrackerByID(context.Background(), tracker.ID)
 		require.NoError(t, err)
 		assert.Equal(t, tracker.Name, saved.Name)
 		assert.Equal(t, tracker.Battery, saved.Battery)
@@ -57,7 +57,7 @@ func TestCreateChirpstackTracker(t *testing.T) {
 		require.NoError(t, err)
 		defer cleanupTracker(t, tracker.ID)
 
-		saved, err := repository.GetTrackerByID(tracker.ID)
+		saved, err := repository.GetTrackerByID(context.Background(), tracker.ID)
 		require.NoError(t, err)
 		assert.Equal(t, int16(-1), saved.Battery)
 	})
@@ -79,7 +79,7 @@ func TestCreateChirpstackTracker(t *testing.T) {
 		require.NoError(t, err)
 		defer cleanupTracker(t, tracker.ID)
 
-		saved, err := repository.GetTrackerByID(tracker.ID)
+		saved, err := repository.GetTrackerByID(context.Background(), tracker.ID)
 		require.NoError(t, err)
 		assert.Equal(t, 0.0, saved.Position.Latitude)
 		assert.Equal(t, 0.0, saved.Position.Longitude)
@@ -102,7 +102,7 @@ func TestCreateChirpstackTracker(t *testing.T) {
 		require.NoError(t, err)
 		defer cleanupTracker(t, tracker.ID)
 
-		saved, err := repository.GetTrackerByID(tracker.ID)
+		saved, err := repository.GetTrackerByID(context.Background(), tracker.ID)
 		require.NoError(t, err)
 		assert.Equal(t, -90.0, saved.Position.Latitude)
 		assert.Equal(t, 180.0, saved.Position.Longitude)
@@ -125,7 +125,7 @@ func TestCreateChirpstackTracker(t *testing.T) {
 		require.NoError(t, err)
 		defer cleanupTracker(t, tracker.ID)
 
-		saved, err := repository.GetTrackerByID(tracker.ID)
+		saved, err := repository.GetTrackerByID(context.Background(), tracker.ID)
 		require.NoError(t, err)
 		assert.Equal(t, "", saved.Name)
 	})
@@ -167,7 +167,7 @@ func TestCreateChirpstackTracker(t *testing.T) {
 		require.NoError(t, err)
 		defer cleanupTracker(t, tracker.ID)
 
-		saved, err := repository.GetTrackerByID(tracker.ID)
+		saved, err := repository.GetTrackerByID(context.Background(), tracker.ID)
 		require.NoError(t, err)
 		assert.Contains(t, saved.Name, "Special")
 	})
@@ -189,7 +189,7 @@ func TestCreateChirpstackTracker(t *testing.T) {
 		require.NoError(t, err)
 		defer cleanupTracker(t, tracker.ID)
 
-		saved, err := repository.GetTrackerByID(tracker.ID)
+		saved, err := repository.GetTrackerByID(context.Background(), tracker.ID)
 		require.NoError(t, err)
 		assert.Equal(t, int16(32767), saved.Battery)
 	})
@@ -307,7 +307,7 @@ func TestCreateChirpstackTracker(t *testing.T) {
 		require.NoError(t, err)
 		defer cleanupTracker(t, tracker.ID)
 
-		saved, err := repository.GetTrackerByID(tracker.ID)
+		saved, err := repository.GetTrackerByID(context.Background(), tracker.ID)
 		require.NoError(t, err)
 		assert.Contains(t, saved.Name, "中文")
 	})
