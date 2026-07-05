@@ -1,14 +1,12 @@
 package traccar
 
 import (
-	"IRIS-Server/internal/mcpcontrol"
 	"IRIS-Server/internal/models"
 	"IRIS-Server/internal/repository"
 	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"math"
 	"time"
 
 	"github.com/gofrs/uuid/v5"
@@ -81,96 +79,81 @@ func handleTraccarMessage(ctx context.Context, payload []byte) error {
 	if err != nil {
 		return fmt.Errorf("failed to parse websocket payload as traccar message: %w", err)
 	}
+	slog.Info("Traccar message handled successfully", "message", message)
 
-	updateTrackers(ctx, message.Devices, message.Positions)
+	updateTrackers(ctx, message)
 
 	return nil
 }
 
-func updateTrackers(ctx context.Context, devices []device, positions []position) {
-	for _, device := range devices {
-		slog.Debug("Traccar device update received", "device_id", device.ID, "status", device.Status)
+func updateTrackers(ctx context.Context, message traccarMessage) {
+	// Go through all devices in list and update the database registration
+	for _, device := range message.Devices {
+		slog.Info("Traccar device update received", "device_id", device.ID, "status", device.Status)
 
 		trackerID, err := repository.GetTrackerIDByTraccarID(ctx, device.ID)
 		if err != nil {
-			return
+			slog.Error("Failed to get tracker ID by Traccar ID", "error", err, "traccar_id", device.ID)
+			continue
 		}
 
-		devicePosition := models.Position{
-			Latitude:  math.Inf(-1),
-			Longitude: math.Inf(-1),
-		}
-		if device.PositionID != nil {
-			for _, position := range positions {
-				if position.ID == *device.PositionID {
-					devicePosition.Latitude = position.Latitude
-					devicePosition.Longitude = position.Longitude
-					break
-				}
+		if trackerID == uuid.Nil {
+			err = repository.CreateTraccarTracker(ctx, &models.TraccarTracker{
+				BaseTracker: models.BaseTracker{
+					Name:    device.Name,
+					Battery: -1,
+					Position: models.Position{
+						Latitude:  0.0,
+						Longitude: 0.0,
+					},
+				},
+				TraccarID: device.ID,
+			})
+			slog.Info("Created new tracker for Traccar device", "traccar_id", device.ID)
+
+			if err != nil {
+				slog.Error("Failed to create tracker for Traccar device", "error", err, "traccar_id", device.ID)
 			}
 		}
+	}
 
-		// Parse Chirpstack uplink message into tracker model
+	for _, position := range message.Positions {
+		trackerID, err := repository.GetTrackerIDByTraccarID(ctx, position.DeviceID)
+		if err != nil {
+			slog.Error("Failed to get tracker ID by Traccar ID", "error", err, "traccar_id", position.DeviceID)
+			continue
+		}
+
+		if trackerID == uuid.Nil {
+			slog.Warn("Received position update for unknown Traccar device", "traccar_id", position.DeviceID)
+			continue
+		}
+
+		batteryLevel, ok := position.Attributes["batteryLevel"].(float64)
+		if !ok {
+			batteryLevel = -1
+		}
 		tracker := models.BaseTracker{
-			ID:       trackerID,
-			Battery:  -1, // TODO: parse battery from attributes, might be key batteryLevel or battery, to be tested
-			Position: devicePosition,
+			ID: trackerID,
+			Position: models.Position{
+				Latitude:  position.Latitude,
+				Longitude: position.Longitude,
+			},
+			Battery:    int16(batteryLevel),
+			LastUpdate: position.ServerTime,
 		}
 
-		err = updateTrackerPositionInDB(ctx, &tracker, device.ID)
+		err = repository.UpdateTracker(ctx, tracker)
 		if err != nil {
-			return
-		}
-
-		// TODO: this code is cloned from handlers/chirpstackGateway.go
-		// TODO: this should be a generic function that can be called from both places to avoid code duplication
-		// Skip MCP update if no resource is assigned
-		trackerData, err := repository.GetTrackerByID(ctx, tracker.ID)
-		if err != nil {
-			// c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get tracker: " + err.Error()})
+			slog.Error("Failed to update tracker position in DB", "error", err, "tracker_id", trackerID)
 			continue
 		}
 
-		if trackerData.TableauResource == nil {
-			// No resource assigned, skip MCP update
-			// c.JSON(http.StatusOK, gin.H{"status": "success", "note": "no resource assigned, MCP update skipped"})
-			continue
-		}
-
-		// Resource assigned, proceed with MCP update
-		// Update tracker marker in MCP
-		err = mcpcontrol.UpdateMarkerInMCP(ctx, tracker.ID)
-		if err != nil {
-			slog.Error("Failed to update tracker marker in MCP", "trackerID", tracker.ID, "error", err)
-			// c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update tracker marker in MCP: " + err.Error()})
-			continue
-		}
-
-		// c.JSON(http.StatusOK, gin.H{"status": "success"})
+		slog.Debug("Updated tracker position in DB",
+			"tracker_id", trackerID,
+			"latitude", position.Latitude,
+			"longitude", position.Longitude,
+			"battery", batteryLevel,
+		)
 	}
-}
-
-func updateTrackerPositionInDB(ctx context.Context, tracker *models.BaseTracker, traccarID int64) error {
-	if tracker.ID == uuid.Nil { // Tracker unknown
-		chirpstackTracker := models.TraccarTracker{
-			BaseTracker: *tracker, TraccarID: traccarID,
-		}
-
-		err := repository.CreateTraccarTracker(ctx, &chirpstackTracker)
-		if err != nil {
-			return fmt.Errorf("failed to create tracker: %w", err)
-		}
-
-		// Propagate the newly created tracker ID back to the caller's BaseTracker
-		tracker.ID = chirpstackTracker.ID
-		return nil
-	}
-
-	// Tracker known, update existing record
-	err := repository.UpdateTracker(ctx, *tracker)
-	if err != nil {
-		return fmt.Errorf("failed to update tracker: %w", err)
-	}
-
-	return nil
 }
