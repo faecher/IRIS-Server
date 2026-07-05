@@ -170,7 +170,9 @@ func GetTrackerIDByTraccarID(ctx context.Context, traccarID int64) (uuid.UUID, e
 
 	var trackerID uuid.UUID
 	err := DBConnPool.QueryRow(ctx, SQL, traccarID).Scan(&trackerID)
-	if err != nil {
+	if errors.Is(err, pgx.ErrNoRows) {
+		return uuid.Nil, nil // Tracker not found
+	} else if err != nil {
 		return uuid.Nil, fmt.Errorf("failed to query tracker ID by Traccar ID: %w", err)
 	}
 
