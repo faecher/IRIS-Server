@@ -68,7 +68,7 @@ Welcome to  ╚═╝╚═╝  ╚═╝╚═╝╚══════╝`)
 	// --- Webserver ---
 	// Start Webserver
 	router := gin.Default()
-	registerHandlers(router)
+	registerHandlers(router, cfg)
 
 	slog.Info("Starting web server on " + cfg.Server.Address + ":8080" + "...")
 
@@ -98,7 +98,7 @@ Welcome to  ╚═╝╚═╝  ╚═╝╚═╝╚══════╝`)
 	}
 }
 
-func registerHandlers(router *gin.Engine) {
+func registerHandlers(router *gin.Engine, cfg *config.Config) {
 	handlers.MCPHandler(router)
 	handlers.SystemHandler(router)
 	handlers.TrackerHandler(router)
@@ -107,12 +107,30 @@ func registerHandlers(router *gin.Engine) {
 
 	router.Use(bodySizeLimit(maxRequestBodySize)) // Limit request body size for all routes
 
+	if cfg.Server.AllowCORS {
+		slog.Info("CORS is enabled. Allowing requests from any origin.")
+		router.Use(allowCORS())
+	}
+
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 }
 
 func bodySizeLimit(maxBytes int64) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxBytes)
+		c.Next()
+	}
+}
+
+func allowCORS() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(http.StatusNoContent)
+			return
+		}
+
 		c.Next()
 	}
 }
