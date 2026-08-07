@@ -190,3 +190,6 @@ cython_debug/
 
 # Database files
 *.db
+
+# Go build artifacts
+cmd/iris-server/__debug_bin.exe
