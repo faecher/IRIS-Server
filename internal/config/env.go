@@ -54,6 +54,8 @@ type WebServerConfig struct {
 	WriteTimeout   int `env:"SERVER_WRITE_TIMEOUT"    envDefault:"10"`      // in seconds
 	IdleTimeout    int `env:"SERVER_IDLE_TIMEOUT"     envDefault:"2"`       // in minutes
 	MaxHeaderBytes int `env:"SERVER_MAX_HEADER_BYTES" envDefault:"1048576"` // 1 MB default
+
+	AllowCORS bool `env:"SERVER_ALLOW_CORS" envDefault:"false"` // Allow Cross-Origin Resource Sharing (CORS) for all origins
 }
 
 // Config is the main configuration struct
