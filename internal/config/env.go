@@ -5,6 +5,7 @@ package config
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/caarlos0/env/v10"
 	"github.com/joho/godotenv"
@@ -81,6 +82,9 @@ func Load() (*Config, error) {
 	if cfg.SQL.Password == "" && cfg.SQL.PasswordFromFile != "" {
 		cfg.SQL.Password = cfg.SQL.PasswordFromFile
 	}
+
+	cfg.Traccar.Host = strings.TrimSuffix(cfg.Traccar.Host, "/")
+
 	return cfg, nil
 }
 
