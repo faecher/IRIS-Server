@@ -8,6 +8,7 @@ linters:
   - wsl
   - nlreturn
   - exhaustruct
+  - exhaustruct_v5
   - tagliatelle
   - godot
   - paralleltest
