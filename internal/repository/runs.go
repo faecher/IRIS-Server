@@ -18,7 +18,7 @@ func GetAllRuns() ([]models.MCPRun, error) {
 		place, address_field,
 		latitude, longitude,
 		has_patient, active
-	FROM mcp_runs
+	FROM runs
 	WHERE operation_id = (SELECT operation_id FROM mcp_config WHERE id = 1) AND active = true`
 
 	rows, err := DBConnPool.Query(context.Background(), SQL)
@@ -65,7 +65,7 @@ func GetRunByID(runID uuid.UUID) (*models.MCPRun, error) {
 		place, address_field,
 		latitude, longitude,
 		has_patient, active
-	FROM mcp_runs
+	FROM runs
 	WHERE run_id = $1`
 
 	row := DBConnPool.QueryRow(context.Background(), SQL, runID)
@@ -92,7 +92,7 @@ func GetRunByID(runID uuid.UUID) (*models.MCPRun, error) {
 // UpdateRunPosition updates the position (latitude and longitude) of a specific MCP run
 func UpdateRunPosition(runID string, latitude, longitude float64) error {
 	SQL := `
-	UPDATE mcp_runs
+	UPDATE runs
 	SET latitude = $1, longitude = $2
 	WHERE run_id = $3`
 
@@ -107,7 +107,7 @@ func UpdateRunPosition(runID string, latitude, longitude float64) error {
 // UpsertRun creates or updates an MCP run in the database
 func UpsertRun(run *models.MCPRun) error {
 	runSQL := `
-	INSERT INTO mcp_runs (
+	INSERT INTO runs (
 	 	run_id,
 		operation_id,
 		house_object,
@@ -118,6 +118,7 @@ func UpsertRun(run *models.MCPRun) error {
 	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
 	ON CONFLICT (run_id) DO UPDATE 
 	SET operation_id = EXCLUDED.operation_id,
+		house_object = EXCLUDED.house_object,
 	    place = EXCLUDED.place,
 	    address_field = EXCLUDED.address_field,
 	    latitude = EXCLUDED.latitude,

@@ -1,6 +1,6 @@
 basePath: /
 definitions:
-  models.BaseTracker:
+  IRIS-Server_internal_models.BaseTracker:
     properties:
       battery:
         type: integer
@@ -11,24 +11,30 @@ definitions:
       name:
         type: string
       position:
-        $ref: '#/definitions/models.Position'
+        $ref: '#/definitions/IRIS-Server_internal_models.Position'
       resource:
-        $ref: '#/definitions/models.TableauResource'
+        $ref: '#/definitions/IRIS-Server_internal_models.TableauResource'
     type: object
-  models.MCPConfig:
+  IRIS-Server_internal_models.MCPConfig:
     properties:
       api_key:
         type: string
+      delete_markers_on_unassign:
+        type: boolean
       enabled:
         type: boolean
       operation_id:
         type: string
+      sentNotEnabledWarning:
+        description: internal flag to track if the "not enabled" warning has been
+          logged
+        type: boolean
       siteplan_id:
         type: string
       url:
         type: string
     type: object
-  models.MCPOperation:
+  IRIS-Server_internal_models.MCPOperation:
     properties:
       active:
         type: boolean
@@ -37,32 +43,53 @@ definitions:
       id:
         type: string
       place:
-        $ref: '#/definitions/models.MCPPlace'
+        $ref: '#/definitions/IRIS-Server_internal_models.MCPPlace'
       title:
         type: string
     type: object
-  models.MCPPlace:
+  IRIS-Server_internal_models.MCPPlace:
     properties:
       id:
         type: string
       name:
         type: string
     type: object
-  models.MCPSiteplan:
+  IRIS-Server_internal_models.MCPRun:
+    properties:
+      active:
+        type: boolean
+      address:
+        type: string
+      hasPatient:
+        type: boolean
+      id:
+        type: string
+      lat:
+        type: number
+      long:
+        type: number
+      obj:
+        type: string
+      operation:
+        $ref: '#/definitions/IRIS-Server_internal_models.MCPOperation'
+      place:
+        type: string
+    type: object
+  IRIS-Server_internal_models.MCPSiteplan:
     properties:
       id:
         type: string
       name:
         type: string
     type: object
-  models.Position:
+  IRIS-Server_internal_models.Position:
     properties:
       lat:
         type: number
       lon:
         type: number
     type: object
-  models.Resource:
+  IRIS-Server_internal_models.Resource:
     properties:
       id:
         type: string
@@ -71,16 +98,27 @@ definitions:
       type:
         type: string
     type: object
-  models.TableauResource:
+  IRIS-Server_internal_models.TableauResource:
     properties:
       id:
         type: string
+      lat:
+        type: number
+      lon:
+        type: number
       operationId:
         type: string
       resource:
-        $ref: '#/definitions/models.Resource'
+        $ref: '#/definitions/IRIS-Server_internal_models.Resource'
       status:
         type: integer
+    type: object
+  internal_handlers.PositionRequest:
+    properties:
+      lat:
+        type: number
+      long:
+        type: number
     type: object
 host: 0.0.0.0:8080
 info:
@@ -172,7 +210,7 @@ paths:
           description: List of active operations
           schema:
             items:
-              $ref: '#/definitions/models.MCPOperation'
+              $ref: '#/definitions/IRIS-Server_internal_models.MCPOperation'
             type: array
         "500":
           description: Failed to fetch MCP operations
@@ -222,7 +260,7 @@ paths:
           description: List of siteplans
           schema:
             items:
-              $ref: '#/definitions/models.MCPSiteplan'
+              $ref: '#/definitions/IRIS-Server_internal_models.MCPSiteplan'
             type: array
         "422":
           description: No place associated with selected operation
@@ -285,7 +323,7 @@ paths:
         name: config
         required: true
         schema:
-          $ref: '#/definitions/models.MCPConfig'
+          $ref: '#/definitions/IRIS-Server_internal_models.MCPConfig'
       responses:
         "200":
           description: MCP integration configured successfully
@@ -314,7 +352,7 @@ paths:
           description: List of Tableau resources
           schema:
             items:
-              $ref: '#/definitions/models.TableauResource'
+              $ref: '#/definitions/IRIS-Server_internal_models.TableauResource'
             type: array
         "500":
           description: Failed to fetch resources
@@ -325,6 +363,109 @@ paths:
       summary: Get all resources
       tags:
       - resources
+  /resources/{resourceId}/position:
+    put:
+      consumes:
+      - application/json
+      description: Updates the position (longitude and latitude) of a specific resource
+      parameters:
+      - description: Resource ID
+        in: path
+        name: resourceId
+        required: true
+        type: string
+      - description: Position data
+        in: body
+        name: position
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers.PositionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Resource position updated successfully
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to update resource position
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Set resource position
+      tags:
+      - resources
+  /runs/:
+    get:
+      description: Returns a list of all runs from the MCP system
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of MCP runs
+          schema:
+            items:
+              $ref: '#/definitions/IRIS-Server_internal_models.MCPRun'
+            type: array
+        "500":
+          description: Failed to fetch runs
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get all runs
+      tags:
+      - runs
+  /runs/{runId}/position:
+    post:
+      consumes:
+      - application/json
+      description: Sets the position of a specific run on the map.
+      parameters:
+      - description: Run ID
+        in: path
+        name: runId
+        required: true
+        type: string
+      - description: Position data
+        in: body
+        name: position
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers.PositionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Position set successfully
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid input
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to set run position
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Set run position
+      tags:
+      - runs
   /system/status:
     get:
       description: Returns system health information including database status, MCP
@@ -383,7 +524,7 @@ paths:
           description: List of trackers
           schema:
             items:
-              $ref: '#/definitions/models.BaseTracker'
+              $ref: '#/definitions/IRIS-Server_internal_models.BaseTracker'
             type: array
         "500":
           description: Failed to fetch trackers
