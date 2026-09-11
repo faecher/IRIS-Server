@@ -16,6 +16,12 @@ linters:
 
   exclusions:
     rules:
+    - path: handlers/resources.go
+      linters:
+        - dupl
+    - path: handlers/runs.go
+      linters:
+        - dupl
     # - source: "time = defaultTime"
     #   linters:
     #     - staticcheck
