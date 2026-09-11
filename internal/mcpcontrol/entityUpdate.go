@@ -20,6 +20,8 @@ import (
 // ErrLocationNotFound indicates that the location for a given run could not be found
 var ErrLocationNotFound = errors.New("location not found")
 
+var positionRequestTimeout = 5 * time.Second
+
 // UpdateMCPResourcesInDB fetches resources from the MCP system and updates/inserts them into the local database
 func UpdateMCPResourcesInDB() error {
 	resources, err := getMCPResources()
@@ -78,7 +80,7 @@ func getCoordinates(run models.MCPRun) (float64, float64, error) {
 	query := fmt.Sprintf("https://nominatim.openstreetmap.org/search?street=%s&city=%s&format=json&limit=1",
 		run.Street+" "+run.House, run.City)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), positionRequestTimeout)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, query, nil) // #nosec G107
