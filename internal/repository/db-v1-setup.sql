@@ -111,8 +111,8 @@ CREATE TABLE runs (
 	house_object text,
 	place text,
 	address_field text,
-	latitude float64,
-	longitude float64,
+	latitude DOUBLE PRECISION,
+	longitude DOUBLE PRECISION,
 	has_patient boolean,
 	active boolean,
 
