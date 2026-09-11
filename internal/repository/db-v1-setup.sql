@@ -90,8 +90,8 @@ CREATE TABLE tableau_resources (
 	operation_id uuid NOT NULL,
 	status SMALLINT NOT NULL,
 
-	position_longitude DOUBLE PRECISION,
-	position_latitude DOUBLE PRECISION,
+	position_longitude DOUBLE PRECISION DEFAULT 'NaN'::double precision,
+	position_latitude DOUBLE PRECISION DEFAULT 'NaN'::double precision,
 
 	-- System
 	created_at timestamp DEFAULT CURRENT_TIMESTAMP,
