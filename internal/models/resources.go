@@ -13,6 +13,8 @@ type Resource struct {
 
 // TableauResource represents an MCP resource that is present in a specific operation
 type TableauResource struct {
+	Position
+
 	ID          uuid.UUID `db:"tableau_resource_id" json:"id"`
 	OperationID uuid.UUID `db:"operation_id"        json:"operationId"`
 	Resource    Resource  `json:"resource"`

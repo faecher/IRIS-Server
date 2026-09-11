@@ -63,6 +63,21 @@ func GetMCPSiteplans() ([]models.MCPSiteplan, error) {
 	return siteplans, nil
 }
 
+func getMCPRuns() ([]models.MCPRun, error) {
+	body, err := mcpRequestFromEndpointWithCurrentOperation(http.MethodGet, "/api/runs")
+	if err != nil {
+		return nil, fmt.Errorf("failed to request MCP runs: %w", err)
+	}
+
+	var runs []models.MCPRun
+	err = json.Unmarshal(body, &runs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal MCP runs: %w", err)
+	}
+
+	return runs, nil
+}
+
 func getMCPResources() ([]models.TableauResource, error) {
 	body, err := mcpRequestFromEndpointWithCurrentOperation(http.MethodGet, "/api/tableau/resources")
 	if err != nil {

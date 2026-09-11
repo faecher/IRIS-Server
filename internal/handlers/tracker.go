@@ -13,6 +13,9 @@ import (
 	"github.com/gofrs/uuid/v5"
 )
 
+// ErrInvalidRequestBody is a constant error message for invalid request bodies
+const ErrInvalidRequestBody = "Invalid request body"
+
 // TrackerHandler registers all tracker-related HTTP endpoints
 func TrackerHandler(router *gin.Engine) {
 	trackerGroup := router.Group("/tracker")
@@ -163,7 +166,7 @@ func renameTracker(c *gin.Context) {
 	}
 	err = c.BindJSON(&req)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": ErrInvalidRequestBody})
 		return
 	}
 

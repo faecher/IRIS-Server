@@ -100,6 +100,7 @@ Welcome to  ╚═╝╚═╝  ╚═╝╚═╝╚══════╝`)
 
 func registerHandlers(router *gin.Engine, cfg *config.Config) {
 	handlers.MCPHandler(router)
+	handlers.RunsHandler(router)
 	handlers.SystemHandler(router)
 	handlers.TrackerHandler(router)
 	handlers.GatewayHandler(router)
@@ -199,6 +200,11 @@ func syncResources(ctx context.Context, interval uint16) {
 			err := mcpcontrol.UpdateMCPResourcesInDB()
 			if err != nil {
 				slog.Error("Failed to sync MCP resources:", "error", err)
+			}
+
+			err = mcpcontrol.UpdateMCPRunsInDB()
+			if err != nil {
+				slog.Error("Failed to sync MCP runs:", "error", err)
 			}
 		case <-ctx.Done():
 			return

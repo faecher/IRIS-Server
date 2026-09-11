@@ -24,7 +24,9 @@ func GetAllResources() ([]models.TableauResource, error) {
 		tr.status,
 		r.resource_id,
 		r.name,
-		r.type
+		r.type,
+		tr.position_longitude,
+		tr.position_latitude
 	FROM tableau_resources tr
 	JOIN resources r ON tr.resource_id = r.resource_id
 	WHERE tr.operation_id = (SELECT operation_id FROM mcp_config WHERE id = 1)`
@@ -45,6 +47,8 @@ func GetAllResources() ([]models.TableauResource, error) {
 			&tableauResource.Resource.ID,
 			&tableauResource.Resource.Name,
 			&tableauResource.Resource.Type,
+			&tableauResource.Longitude,
+			&tableauResource.Latitude,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan resource row: %w", err)
@@ -83,6 +87,8 @@ func GetResourceByID(ctx context.Context, tableauResourceID uuid.UUID) (*models.
 		&tableauResource.Resource.ID,
 		&tableauResource.Resource.Name,
 		&tableauResource.Resource.Type,
+		&tableauResource.Longitude,
+		&tableauResource.Latitude,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNoResourceFound
@@ -209,6 +215,21 @@ func UpsertResource(resource *models.TableauResource) error {
 	)
 	if err != nil {
 		return fmt.Errorf("failed to upsert tableau resource: %w", err)
+	}
+
+	return nil
+}
+
+// UpdateResourcePosition updates the position (latitude and longitude) of a specific MCP resource
+func UpdateResourcePosition(resourceID string, latitude, longitude float64) error {
+	SQL := `
+	UPDATE resources
+	SET position_longitude = $1, position_latitude = $2
+	WHERE resource_id = $3`
+
+	_, err := DBConnPool.Exec(context.Background(), SQL, longitude, latitude, resourceID)
+	if err != nil {
+		return fmt.Errorf("failed to update resource position: %w", err)
 	}
 
 	return nil
