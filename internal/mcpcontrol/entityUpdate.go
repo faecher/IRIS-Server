@@ -5,12 +5,14 @@ package mcpcontrol
 import (
 	"IRIS-Server/internal/models"
 	"IRIS-Server/internal/repository"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
 	"math"
 	"net/http"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -39,7 +41,7 @@ func UpdateMCPResourcesInDB() error {
 func UpdateMCPRunsInDB() error {
 	runs, err := getMCPRuns()
 	if err != nil {
-		return fmt.Errorf("failed to get MCP resources: %w", err)
+		return fmt.Errorf("failed to get MCP runs: %w", err)
 	}
 
 	for _, run := range runs {
@@ -57,33 +59,43 @@ func UpdateMCPRunsInDB() error {
 
 			run.Latitude = latitude
 			run.Longitude = longitude
+		} else {
+			run.Latitude = oldRun.Latitude
+			run.Longitude = oldRun.Longitude
 		}
 
 		err = repository.UpsertRun(&run)
 		if err != nil {
-			return fmt.Errorf("failed to upsert resource %s: %w", run.ID.String(), err)
+			return fmt.Errorf("failed to upsert runs %s: %w", run.ID.String(), err)
 		}
 	}
 
 	return nil
 }
 
-//nolint:noctx
 func getCoordinates(run models.MCPRun) (float64, float64, error) {
 	// access nominatim.org api, see https://nominatim.org/release-docs/develop/api/Search/ for more information
 	query := fmt.Sprintf("https://nominatim.openstreetmap.org/search?street=%s&city=%s&format=json&limit=1",
-		run.City, run.Street+" "+run.House)
+		run.Street+" "+run.House, run.City)
 
-	resp, err := http.Get(query) // #nosec G107
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, query, nil) // #nosec G107
 	if err != nil {
-		return 0, 0, fmt.Errorf("failed to get coordinates: %w", err)
+		return math.NaN(), math.NaN(), fmt.Errorf("failed to create request: %w", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req) // #nosec G107
+	if err != nil {
+		return math.NaN(), math.NaN(), fmt.Errorf("failed to get coordinates: %w", err)
 	}
 	defer resp.Body.Close()
 
 	// Parse the JSON response
 	var results []struct {
-		Lat float64 `json:"lat"`
-		Lon float64 `json:"lon"`
+		Lat float64 `json:"lat,string"`
+		Lon float64 `json:"lon,string"`
 	}
 	err = json.NewDecoder(resp.Body).Decode(&results)
 	if err != nil {

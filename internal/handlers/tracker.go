@@ -4,6 +4,7 @@ package handlers
 
 import (
 	"IRIS-Server/internal/mcpcontrol"
+	"IRIS-Server/internal/models"
 	"IRIS-Server/internal/repository"
 	"fmt"
 	"log/slog"
@@ -35,6 +36,7 @@ func TrackerHandler(router *gin.Engine) {
 // @Failure 500 {object} map[string]string "Failed to fetch trackers"
 // @Router /tracker/ [get]
 func listTrackers(c *gin.Context) {
+	var trackers []models.Tracker
 	trackers, err := repository.GetAllTrackers()
 	if err != nil {
 		slog.Error("Failed to fetch trackers", "error", err)

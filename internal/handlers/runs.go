@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"IRIS-Server/internal/models"
 	"IRIS-Server/internal/repository"
 	"net/http"
 
@@ -24,13 +25,14 @@ func RunsHandler(router *gin.Engine) {
 // @Failure 500 {object} map[string]string "Failed to fetch runs"
 // @Router /runs/ [get]
 func listRuns(c *gin.Context) {
-	resources, err := repository.GetAllRuns()
+	var runs []models.MCPRun
+	runs, err := repository.GetAllRuns()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch runs"})
 		return
 	}
 
-	c.JSON(http.StatusOK, resources)
+	c.JSON(http.StatusOK, runs)
 }
 
 // setRunPosition sets the position of a run
@@ -41,17 +43,14 @@ func listRuns(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param runId path string true "Run ID"
-// @Param position body map[string]float64 true "Position data (latitude and longitude)"
+// @Param position body PositionRequest true "Position data"
 // @Success 200 {object} map[string]string "Position set successfully"
 // @Failure 400 {object} map[string]string "Invalid input"
 // @Failure 500 {object} map[string]string "Failed to set run position"
 // @Router /runs/{runId}/position [post]
 func setRunPosition(c *gin.Context) {
 	// Get position from request body
-	var position struct {
-		Longitude float64 `json:"long"`
-		Latitude  float64 `json:"lat"`
-	}
+	var position PositionRequest
 	err := c.ShouldBindJSON(&position)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": ErrInvalidRequestBody})

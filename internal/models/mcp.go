@@ -44,8 +44,8 @@ type MCPRun struct {
 	House      string       `json:"obj,omitempty"`
 	City       string       `json:"place,omitempty"`
 	Street     string       `json:"address,omitempty"`
-	Latitude   float64      `json:"-"`
-	Longitude  float64      `json:"-"`
+	Latitude   float64      `json:"lat,omitempty"`
+	Longitude  float64      `json:"long,omitempty"`
 	HasPatient bool         `json:"hasPatient,omitempty"`
 	Active     bool         `json:"active,omitempty"`
 }
