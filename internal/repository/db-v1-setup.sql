@@ -67,7 +67,7 @@ CREATE TABLE traccar_trackers (
 );
 
 -- =============================================================================
--- MARK: Resources
+-- MARK: MCP Entities
 -- =============================================================================
 
 CREATE TABLE resources (
@@ -90,6 +90,9 @@ CREATE TABLE tableau_resources (
 	operation_id uuid NOT NULL,
 	status SMALLINT NOT NULL,
 
+	position_longitude DOUBLE PRECISION DEFAULT 'NaN'::double precision,
+	position_latitude DOUBLE PRECISION DEFAULT 'NaN'::double precision,
+
 	-- System
 	created_at timestamp DEFAULT CURRENT_TIMESTAMP,
 	updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
@@ -99,6 +102,29 @@ CREATE TABLE tableau_resources (
 
 CREATE TRIGGER update_tableau_resources_updated_at 
     BEFORE UPDATE ON tableau_resources 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+
+CREATE TABLE runs (
+	run_id uuid PRIMARY KEY,
+	operation_id uuid NOT NULL,
+	house_object text,
+	place text,
+	address_field text,
+	latitude DOUBLE PRECISION,
+	longitude DOUBLE PRECISION,
+	has_patient boolean,
+	active boolean,
+
+	-- System
+	created_at timestamp DEFAULT CURRENT_TIMESTAMP,
+	updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
+
+	UNIQUE (run_id, operation_id)
+);
+
+CREATE TRIGGER update_runs_updated_at 
+    BEFORE UPDATE ON runs 
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 

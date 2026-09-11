@@ -36,3 +36,16 @@ type MCPPlace struct {
 	ID   uuid.UUID `json:"id,omitempty"`
 	Name string    `json:"name,omitempty"`
 }
+
+// MCPRun represents a run in the MCP system
+type MCPRun struct {
+	Operation  MCPOperation `json:"operation"`
+	ID         uuid.UUID    `json:"id,omitempty"`
+	House      string       `json:"obj,omitempty"`
+	City       string       `json:"place,omitempty"`
+	Street     string       `json:"address,omitempty"`
+	Latitude   float64      `json:"lat,omitempty"`
+	Longitude  float64      `json:"long,omitempty"`
+	HasPatient bool         `json:"hasPatient,omitempty"`
+	Active     bool         `json:"active,omitempty"`
+}

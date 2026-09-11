@@ -139,7 +139,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/models.MCPOperation"
+                                "$ref": "#/definitions/IRIS-Server_internal_models.MCPOperation"
                             }
                         }
                     },
@@ -212,7 +212,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/models.MCPSiteplan"
+                                "$ref": "#/definitions/IRIS-Server_internal_models.MCPSiteplan"
                             }
                         }
                     },
@@ -304,7 +304,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.MCPConfig"
+                            "$ref": "#/definitions/IRIS-Server_internal_models.MCPConfig"
                         }
                     }
                 ],
@@ -349,12 +349,168 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/models.TableauResource"
+                                "$ref": "#/definitions/IRIS-Server_internal_models.TableauResource"
                             }
                         }
                     },
                     "500": {
                         "description": "Failed to fetch resources",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/resources/{resourceId}/position": {
+            "put": {
+                "description": "Updates the position (longitude and latitude) of a specific resource",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "resources"
+                ],
+                "summary": "Set resource position",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Resource ID",
+                        "name": "resourceId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Position data",
+                        "name": "position",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handlers.PositionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Resource position updated successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to update resource position",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/runs/": {
+            "get": {
+                "description": "Returns a list of all runs from the MCP system",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "runs"
+                ],
+                "summary": "Get all runs",
+                "responses": {
+                    "200": {
+                        "description": "List of MCP runs",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/IRIS-Server_internal_models.MCPRun"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to fetch runs",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/runs/{runId}/position": {
+            "post": {
+                "description": "Sets the position of a specific run on the map.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "runs"
+                ],
+                "summary": "Set run position",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Run ID",
+                        "name": "runId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Position data",
+                        "name": "position",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handlers.PositionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Position set successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to set run position",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -452,7 +608,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/models.BaseTracker"
+                                "$ref": "#/definitions/IRIS-Server_internal_models.BaseTracker"
                             }
                         }
                     },
@@ -635,7 +791,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "models.BaseTracker": {
+        "IRIS-Server_internal_models.BaseTracker": {
             "type": "object",
             "properties": {
                 "battery": {
@@ -651,24 +807,31 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "position": {
-                    "$ref": "#/definitions/models.Position"
+                    "$ref": "#/definitions/IRIS-Server_internal_models.Position"
                 },
                 "resource": {
-                    "$ref": "#/definitions/models.TableauResource"
+                    "$ref": "#/definitions/IRIS-Server_internal_models.TableauResource"
                 }
             }
         },
-        "models.MCPConfig": {
+        "IRIS-Server_internal_models.MCPConfig": {
             "type": "object",
             "properties": {
                 "api_key": {
                     "type": "string"
+                },
+                "delete_markers_on_unassign": {
+                    "type": "boolean"
                 },
                 "enabled": {
                     "type": "boolean"
                 },
                 "operation_id": {
                     "type": "string"
+                },
+                "sentNotEnabledWarning": {
+                    "description": "internal flag to track if the \"not enabled\" warning has been logged",
+                    "type": "boolean"
                 },
                 "siteplan_id": {
                     "type": "string"
@@ -678,7 +841,7 @@ const docTemplate = `{
                 }
             }
         },
-        "models.MCPOperation": {
+        "IRIS-Server_internal_models.MCPOperation": {
             "type": "object",
             "properties": {
                 "active": {
@@ -691,14 +854,14 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "place": {
-                    "$ref": "#/definitions/models.MCPPlace"
+                    "$ref": "#/definitions/IRIS-Server_internal_models.MCPPlace"
                 },
                 "title": {
                     "type": "string"
                 }
             }
         },
-        "models.MCPPlace": {
+        "IRIS-Server_internal_models.MCPPlace": {
             "type": "object",
             "properties": {
                 "id": {
@@ -709,7 +872,39 @@ const docTemplate = `{
                 }
             }
         },
-        "models.MCPSiteplan": {
+        "IRIS-Server_internal_models.MCPRun": {
+            "type": "object",
+            "properties": {
+                "active": {
+                    "type": "boolean"
+                },
+                "address": {
+                    "type": "string"
+                },
+                "hasPatient": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "lat": {
+                    "type": "number"
+                },
+                "long": {
+                    "type": "number"
+                },
+                "obj": {
+                    "type": "string"
+                },
+                "operation": {
+                    "$ref": "#/definitions/IRIS-Server_internal_models.MCPOperation"
+                },
+                "place": {
+                    "type": "string"
+                }
+            }
+        },
+        "IRIS-Server_internal_models.MCPSiteplan": {
             "type": "object",
             "properties": {
                 "id": {
@@ -720,7 +915,7 @@ const docTemplate = `{
                 }
             }
         },
-        "models.Position": {
+        "IRIS-Server_internal_models.Position": {
             "type": "object",
             "properties": {
                 "lat": {
@@ -731,7 +926,7 @@ const docTemplate = `{
                 }
             }
         },
-        "models.Resource": {
+        "IRIS-Server_internal_models.Resource": {
             "type": "object",
             "properties": {
                 "id": {
@@ -745,20 +940,37 @@ const docTemplate = `{
                 }
             }
         },
-        "models.TableauResource": {
+        "IRIS-Server_internal_models.TableauResource": {
             "type": "object",
             "properties": {
                 "id": {
                     "type": "string"
                 },
+                "lat": {
+                    "type": "number"
+                },
+                "lon": {
+                    "type": "number"
+                },
                 "operationId": {
                     "type": "string"
                 },
                 "resource": {
-                    "$ref": "#/definitions/models.Resource"
+                    "$ref": "#/definitions/IRIS-Server_internal_models.Resource"
                 },
                 "status": {
                     "type": "integer"
+                }
+            }
+        },
+        "internal_handlers.PositionRequest": {
+            "type": "object",
+            "properties": {
+                "lat": {
+                    "type": "number"
+                },
+                "long": {
+                    "type": "number"
                 }
             }
         }
