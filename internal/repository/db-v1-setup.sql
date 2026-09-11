@@ -123,8 +123,8 @@ CREATE TABLE runs (
 	UNIQUE (run_id, operation_id)
 );
 
-CREATE TRIGGER update_tableau_resources_updated_at 
-    BEFORE UPDATE ON tableau_resources 
+CREATE TRIGGER update_runs_updated_at 
+    BEFORE UPDATE ON runs 
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 
