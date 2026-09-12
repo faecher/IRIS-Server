@@ -25,8 +25,9 @@ func GetAllResources() ([]models.TableauResource, error) {
 		r.resource_id,
 		r.name,
 		r.type,
-		tr.position_longitude,
-		tr.position_latitude
+		COALESCE(tr.position_longitude, 0),
+		COALESCE(tr.position_latitude, 0),
+		tr.unset_position
 	FROM tableau_resources tr
 	JOIN resources r ON tr.resource_id = r.resource_id
 	WHERE tr.operation_id = (SELECT operation_id FROM mcp_config WHERE id = 1)`
@@ -49,6 +50,7 @@ func GetAllResources() ([]models.TableauResource, error) {
 			&tableauResource.Resource.Type,
 			&tableauResource.Longitude,
 			&tableauResource.Latitude,
+			&tableauResource.UnsetPosition,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan resource row: %w", err)
@@ -74,8 +76,9 @@ func GetResourceByID(ctx context.Context, tableauResourceID uuid.UUID) (*models.
 		r.resource_id,
 		r.name,
 		r.type,
-		tr.position_longitude,
-		tr.position_latitude
+		COALESCE(tr.position_longitude, 0),
+		COALESCE(tr.position_latitude, 0),
+		tr.unset_position
 	FROM tableau_resources tr
 	JOIN resources r ON tr.resource_id = r.resource_id
 	WHERE tr.tableau_resource_id = $1 
@@ -91,6 +94,7 @@ func GetResourceByID(ctx context.Context, tableauResourceID uuid.UUID) (*models.
 		&tableauResource.Resource.Type,
 		&tableauResource.Longitude,
 		&tableauResource.Latitude,
+		&tableauResource.UnsetPosition,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNoResourceFound
@@ -204,16 +208,23 @@ func UpsertResource(resource *models.TableauResource) error {
 
 	// Then, upsert the tableau_resource
 	tableauSQL := `
-	INSERT INTO tableau_resources (tableau_resource_id, resource_id, operation_id, status) 
-	VALUES ($1, $2, $3, $4) 
+	INSERT INTO tableau_resources (tableau_resource_id, resource_id, operation_id, status, position_longitude, position_latitude, unset_position) 
+	VALUES ($1, $2, $3, $4, $5, $6, $7) 
 	ON CONFLICT (resource_id, operation_id) DO UPDATE 
-	SET status = EXCLUDED.status, tableau_resource_id = EXCLUDED.tableau_resource_id`
+	SET status = EXCLUDED.status,
+	    tableau_resource_id = EXCLUDED.tableau_resource_id,
+	    position_longitude = EXCLUDED.position_longitude,
+	    position_latitude = EXCLUDED.position_latitude,
+	    unset_position = EXCLUDED.unset_position`
 
 	_, err = DBConnPool.Exec(context.Background(), tableauSQL,
 		resource.ID,
 		resource.Resource.ID,
 		resource.OperationID,
 		resource.Status,
+		resource.Longitude,
+		resource.Latitude,
+		resource.UnsetPosition,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to upsert tableau resource: %w", err)
@@ -226,7 +237,7 @@ func UpsertResource(resource *models.TableauResource) error {
 func UpdateResourcePosition(resourceID string, latitude, longitude float64) error {
 	SQL := `
 	UPDATE tableau_resources
-	SET position_longitude = $1, position_latitude = $2
+	SET position_longitude = $1, position_latitude = $2, unset_position = FALSE
 	WHERE tableau_resource_id = $3`
 
 	_, err := DBConnPool.Exec(context.Background(), SQL, longitude, latitude, resourceID)
