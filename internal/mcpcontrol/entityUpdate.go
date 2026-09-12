@@ -10,8 +10,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"math"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -57,13 +57,18 @@ func UpdateMCPRunsInDB() error {
 			latitude, longitude, err := getCoordinates(run)
 			if err != nil {
 				slog.Error("Failed to get coordinates for run", "runID", run.ID.String(), "error", err, "address", run.Street+" "+run.House)
+				run.UnsetPosition = true
+				run.Latitude = 0
+				run.Longitude = 0
+			} else {
+				run.UnsetPosition = false
+				run.Latitude = latitude
+				run.Longitude = longitude
 			}
-
-			run.Latitude = latitude
-			run.Longitude = longitude
 		} else {
 			run.Latitude = oldRun.Latitude
 			run.Longitude = oldRun.Longitude
+			run.UnsetPosition = oldRun.UnsetPosition
 		}
 
 		err = repository.UpsertRun(&run)
@@ -75,24 +80,30 @@ func UpdateMCPRunsInDB() error {
 	return nil
 }
 
-func getCoordinates(run models.MCPRun) (float64, float64, error) {
+func getCoordinates(run models.Run) (float64, float64, error) {
 	// access nominatim.org api, see https://nominatim.org/release-docs/develop/api/Search/ for more information
-	query := fmt.Sprintf("https://nominatim.openstreetmap.org/search?street=%s&city=%s&format=json&limit=1",
-		run.Street+" "+run.House, run.City)
+	query := buildNominatimURL(run)
 
 	ctx, cancel := context.WithTimeout(context.Background(), positionRequestTimeout)
 	defer cancel()
 
+	slog.Info("Fetching coordinates for run", "runID", run.ID.String(), "query", query)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, query, nil) // #nosec G107
 	if err != nil {
-		return math.NaN(), math.NaN(), fmt.Errorf("failed to create request: %w", err)
+		return 0, 0, fmt.Errorf("failed to create request: %w", err)
 	}
+	req.Header.Set("User-Agent", "IRIS/1.0 (github.com/FAECHER/IRIS-Server)")
 
 	resp, err := http.DefaultClient.Do(req) // #nosec G107
 	if err != nil {
-		return math.NaN(), math.NaN(), fmt.Errorf("failed to get coordinates: %w", err)
+		return 0, 0, fmt.Errorf("failed to get coordinates: %w", err)
 	}
 	defer resp.Body.Close()
+
+	responseStatus := resp.StatusCode
+	if responseStatus != http.StatusOK {
+		return 0, 0, fmt.Errorf("nominatim API returned non-200 status: %d", responseStatus)
+	}
 
 	// Parse the JSON response
 	var results []struct {
@@ -101,12 +112,30 @@ func getCoordinates(run models.MCPRun) (float64, float64, error) {
 	}
 	err = json.NewDecoder(resp.Body).Decode(&results)
 	if err != nil {
-		return math.NaN(), math.NaN(), fmt.Errorf("failed to decode coordinates: %w", err)
+		return 0, 0, fmt.Errorf("failed to decode coordinates: %w", err)
 	}
 
 	if len(results) == 0 {
-		return math.NaN(), math.NaN(), ErrLocationNotFound
+		return 0, 0, ErrLocationNotFound
 	}
 
+	slog.Info("Coordinates fetched for run", "runID", run.ID.String(), "latitude", results[0].Lat, "longitude", results[0].Lon)
+
 	return results[0].Lat, results[0].Lon, nil
+}
+
+func buildNominatimURL(run models.Run) string {
+	params := url.Values{}
+	params.Set("street", run.Street+" "+run.House)
+	params.Set("city", run.City)
+	params.Set("format", "json")
+	params.Set("limit", "1")
+
+	u := url.URL{
+		Scheme:   "https",
+		Host:     "nominatim.openstreetmap.org",
+		Path:     "/search",
+		RawQuery: params.Encode(),
+	}
+	return u.String()
 }

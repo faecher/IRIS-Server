@@ -3,6 +3,7 @@ package handlers
 import (
 	"IRIS-Server/internal/models"
 	"IRIS-Server/internal/repository"
+	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -21,13 +22,14 @@ func RunsHandler(router *gin.Engine) {
 // @Description Returns a list of all runs from the MCP system
 // @Tags runs
 // @Produce json
-// @Success 200 {array} models.MCPRun "List of MCP runs"
+// @Success 200 {array} models.Run "List of MCP runs"
 // @Failure 500 {object} map[string]string "Failed to fetch runs"
 // @Router /runs/ [get]
 func listRuns(c *gin.Context) {
-	var runs []models.MCPRun
+	var runs []models.Run
 	runs, err := repository.GetAllRuns()
 	if err != nil {
+		slog.Error("Failed to fetch runs", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch runs"})
 		return
 	}

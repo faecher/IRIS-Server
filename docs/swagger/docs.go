@@ -139,7 +139,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/IRIS-Server_internal_models.MCPOperation"
+                                "$ref": "#/definitions/models.MCPOperation"
                             }
                         }
                     },
@@ -212,7 +212,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/IRIS-Server_internal_models.MCPSiteplan"
+                                "$ref": "#/definitions/models.MCPSiteplan"
                             }
                         }
                     },
@@ -304,7 +304,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/IRIS-Server_internal_models.MCPConfig"
+                            "$ref": "#/definitions/models.MCPConfig"
                         }
                     }
                 ],
@@ -349,7 +349,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/IRIS-Server_internal_models.TableauResource"
+                                "$ref": "#/definitions/models.TableauResource"
                             }
                         }
                     },
@@ -392,7 +392,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_handlers.PositionRequest"
+                            "$ref": "#/definitions/handlers.PositionRequest"
                         }
                     }
                 ],
@@ -443,7 +443,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/IRIS-Server_internal_models.MCPRun"
+                                "$ref": "#/definitions/models.Run"
                             }
                         }
                     },
@@ -486,7 +486,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_handlers.PositionRequest"
+                            "$ref": "#/definitions/handlers.PositionRequest"
                         }
                     }
                 ],
@@ -608,7 +608,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/IRIS-Server_internal_models.BaseTracker"
+                                "$ref": "#/definitions/models.BaseTracker"
                             }
                         }
                     },
@@ -791,7 +791,18 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "IRIS-Server_internal_models.BaseTracker": {
+        "handlers.PositionRequest": {
+            "type": "object",
+            "properties": {
+                "lat": {
+                    "type": "number"
+                },
+                "long": {
+                    "type": "number"
+                }
+            }
+        },
+        "models.BaseTracker": {
             "type": "object",
             "properties": {
                 "battery": {
@@ -807,14 +818,14 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "position": {
-                    "$ref": "#/definitions/IRIS-Server_internal_models.Position"
+                    "$ref": "#/definitions/models.Position"
                 },
                 "resource": {
-                    "$ref": "#/definitions/IRIS-Server_internal_models.TableauResource"
+                    "$ref": "#/definitions/models.TableauResource"
                 }
             }
         },
-        "IRIS-Server_internal_models.MCPConfig": {
+        "models.MCPConfig": {
             "type": "object",
             "properties": {
                 "api_key": {
@@ -841,7 +852,7 @@ const docTemplate = `{
                 }
             }
         },
-        "IRIS-Server_internal_models.MCPOperation": {
+        "models.MCPOperation": {
             "type": "object",
             "properties": {
                 "active": {
@@ -854,14 +865,14 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "place": {
-                    "$ref": "#/definitions/IRIS-Server_internal_models.MCPPlace"
+                    "$ref": "#/definitions/models.MCPPlace"
                 },
                 "title": {
                     "type": "string"
                 }
             }
         },
-        "IRIS-Server_internal_models.MCPPlace": {
+        "models.MCPPlace": {
             "type": "object",
             "properties": {
                 "id": {
@@ -872,39 +883,7 @@ const docTemplate = `{
                 }
             }
         },
-        "IRIS-Server_internal_models.MCPRun": {
-            "type": "object",
-            "properties": {
-                "active": {
-                    "type": "boolean"
-                },
-                "address": {
-                    "type": "string"
-                },
-                "hasPatient": {
-                    "type": "boolean"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "lat": {
-                    "type": "number"
-                },
-                "long": {
-                    "type": "number"
-                },
-                "obj": {
-                    "type": "string"
-                },
-                "operation": {
-                    "$ref": "#/definitions/IRIS-Server_internal_models.MCPOperation"
-                },
-                "place": {
-                    "type": "string"
-                }
-            }
-        },
-        "IRIS-Server_internal_models.MCPSiteplan": {
+        "models.MCPSiteplan": {
             "type": "object",
             "properties": {
                 "id": {
@@ -915,7 +894,7 @@ const docTemplate = `{
                 }
             }
         },
-        "IRIS-Server_internal_models.Position": {
+        "models.Position": {
             "type": "object",
             "properties": {
                 "lat": {
@@ -926,7 +905,7 @@ const docTemplate = `{
                 }
             }
         },
-        "IRIS-Server_internal_models.Resource": {
+        "models.Resource": {
             "type": "object",
             "properties": {
                 "id": {
@@ -940,7 +919,51 @@ const docTemplate = `{
                 }
             }
         },
-        "IRIS-Server_internal_models.TableauResource": {
+        "models.Run": {
+            "type": "object",
+            "properties": {
+                "active": {
+                    "type": "boolean"
+                },
+                "address": {
+                    "type": "string"
+                },
+                "deleted": {
+                    "type": "boolean"
+                },
+                "hasPatient": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "lat": {
+                    "type": "number"
+                },
+                "long": {
+                    "type": "number"
+                },
+                "nr": {
+                    "type": "integer"
+                },
+                "obj": {
+                    "type": "string"
+                },
+                "operation": {
+                    "$ref": "#/definitions/models.MCPOperation"
+                },
+                "place": {
+                    "type": "string"
+                },
+                "text": {
+                    "type": "string"
+                },
+                "unsetPosition": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "models.TableauResource": {
             "type": "object",
             "properties": {
                 "id": {
@@ -956,21 +979,13 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "resource": {
-                    "$ref": "#/definitions/IRIS-Server_internal_models.Resource"
+                    "$ref": "#/definitions/models.Resource"
                 },
                 "status": {
                     "type": "integer"
-                }
-            }
-        },
-        "internal_handlers.PositionRequest": {
-            "type": "object",
-            "properties": {
-                "lat": {
-                    "type": "number"
                 },
-                "long": {
-                    "type": "number"
+                "unsetPosition": {
+                    "type": "boolean"
                 }
             }
         }

@@ -90,8 +90,9 @@ CREATE TABLE tableau_resources (
 	operation_id uuid NOT NULL,
 	status SMALLINT NOT NULL,
 
-	position_longitude DOUBLE PRECISION DEFAULT 'NaN'::double precision,
-	position_latitude DOUBLE PRECISION DEFAULT 'NaN'::double precision,
+	position_longitude DOUBLE PRECISION,
+	position_latitude DOUBLE PRECISION,
+	unset_position boolean default true,
 
 	-- System
 	created_at timestamp DEFAULT CURRENT_TIMESTAMP,
@@ -111,10 +112,14 @@ CREATE TABLE runs (
 	house_object text,
 	place text,
 	address_field text,
-	latitude DOUBLE PRECISION,
-	longitude DOUBLE PRECISION,
+	position_latitude DOUBLE PRECISION,
+	position_longitude DOUBLE PRECISION,
+	unset_position boolean default true,
 	has_patient boolean,
 	active boolean,
+	nr integer default 0,
+	notes text,
+	deleted boolean default false,
 
 	-- System
 	created_at timestamp DEFAULT CURRENT_TIMESTAMP,
