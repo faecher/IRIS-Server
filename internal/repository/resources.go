@@ -247,3 +247,18 @@ func UpdateResourcePosition(resourceID string, latitude, longitude float64) erro
 
 	return nil
 }
+
+// ResetResourcePosition resets the position of a specific MCP resource to default values (0, 0) and marks it as unset
+func ResetResourcePosition(resourceID string) error {
+	SQL := `
+	UPDATE tableau_resources
+	SET position_longitude = 0, position_latitude = 0, unset_position = TRUE
+	WHERE tableau_resource_id = $1`
+
+	_, err := DBConnPool.Exec(context.Background(), SQL, resourceID)
+	if err != nil {
+		return fmt.Errorf("failed to reset resource position: %w", err)
+	}
+
+	return nil
+}
