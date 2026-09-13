@@ -60,7 +60,7 @@ Welcome to  ╚═╝╚═╝  ╚═╝╚═╝╚══════╝`)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go syncResources(ctx, cfg.Update.ResourceUpdate)
+	go syncResources(ctx, cfg.Update.ResourceUpdate, cfg.Geocoding)
 
 	// If you need goroutines for background tasks, such as tracker polling,
 	// start them here just like the MCP resource sync above. You can reuse the provided context.
@@ -100,6 +100,7 @@ Welcome to  ╚═╝╚═╝  ╚═╝╚═╝╚══════╝`)
 
 func registerHandlers(router *gin.Engine, cfg *config.Config) {
 	handlers.MCPHandler(router)
+	handlers.RunsHandler(router)
 	handlers.SystemHandler(router)
 	handlers.TrackerHandler(router)
 	handlers.GatewayHandler(router)
@@ -176,7 +177,7 @@ func loadAndInitMCP() {
 // interval is specified in seconds.
 //
 //nolint:contextcheck
-func syncResources(ctx context.Context, interval uint16) {
+func syncResources(ctx context.Context, interval uint16, cfg config.GeocodingConfig) {
 	if interval <= 0 {
 		slog.Info("MCP resource sync disabled (interval <= 0).")
 		return
@@ -199,6 +200,11 @@ func syncResources(ctx context.Context, interval uint16) {
 			err := mcpcontrol.UpdateMCPResourcesInDB()
 			if err != nil {
 				slog.Error("Failed to sync MCP resources:", "error", err)
+			}
+
+			err = mcpcontrol.UpdateMCPRunsInDB(cfg)
+			if err != nil {
+				slog.Error("Failed to sync MCP runs:", "error", err)
 			}
 		case <-ctx.Done():
 			return

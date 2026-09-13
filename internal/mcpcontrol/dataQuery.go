@@ -4,12 +4,15 @@ package mcpcontrol
 
 import (
 	"IRIS-Server/internal/models"
+	"IRIS-Server/internal/repository"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
+
+	"github.com/jackc/pgx/v5"
 )
 
 // ErrNoOperationSelected indicates that no MCP operation has been configured
@@ -61,6 +64,38 @@ func GetMCPSiteplans() ([]models.MCPSiteplan, error) {
 	}
 
 	return siteplans, nil
+}
+
+func getMCPRuns() ([]models.Run, error) {
+	operationID, err := repository.GetMCPOperation()
+	if errors.Is(err, pgx.ErrNoRows) || operationID == nil {
+		return nil, ErrNoOperationSelected
+	} else if err != nil {
+		return nil, fmt.Errorf("failed to get MCP operation: %w", err)
+	}
+
+	resp, err := mcpRequest(context.Background(), http.MethodGet, "/api/operations/"+operationID.String()+"/runs", nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to request MCP runs: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, ErrMCPRequestFailed
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read MCP runs response: %w", err)
+	}
+
+	var runs []models.Run
+	err = json.Unmarshal(body, &runs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal MCP runs: %w", err)
+	}
+
+	return runs, nil
 }
 
 func getMCPResources() ([]models.TableauResource, error) {

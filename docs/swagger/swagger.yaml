@@ -1,5 +1,12 @@
 basePath: /
 definitions:
+  handlers.PositionRequest:
+    properties:
+      lat:
+        type: number
+      long:
+        type: number
+    type: object
   models.BaseTracker:
     properties:
       battery:
@@ -19,10 +26,16 @@ definitions:
     properties:
       api_key:
         type: string
+      delete_markers_on_unassign:
+        type: boolean
       enabled:
         type: boolean
       operation_id:
         type: string
+      sentNotEnabledWarning:
+        description: internal flag to track if the "not enabled" warning has been
+          logged
+        type: boolean
       siteplan_id:
         type: string
       url:
@@ -71,16 +84,51 @@ definitions:
       type:
         type: string
     type: object
+  models.Run:
+    properties:
+      active:
+        type: boolean
+      address:
+        type: string
+      deleted:
+        type: boolean
+      hasPatient:
+        type: boolean
+      id:
+        type: string
+      lat:
+        type: number
+      long:
+        type: number
+      nr:
+        type: integer
+      obj:
+        type: string
+      operation:
+        $ref: '#/definitions/models.MCPOperation'
+      place:
+        type: string
+      text:
+        type: string
+      unsetPosition:
+        type: boolean
+    type: object
   models.TableauResource:
     properties:
       id:
         type: string
+      lat:
+        type: number
+      lon:
+        type: number
       operationId:
         type: string
       resource:
         $ref: '#/definitions/models.Resource'
       status:
         type: integer
+      unsetPosition:
+        type: boolean
     type: object
 host: 0.0.0.0:8080
 info:
@@ -325,6 +373,109 @@ paths:
       summary: Get all resources
       tags:
       - resources
+  /resources/{resourceId}/position:
+    put:
+      consumes:
+      - application/json
+      description: Updates the position (longitude and latitude) of a specific resource
+      parameters:
+      - description: Resource ID
+        in: path
+        name: resourceId
+        required: true
+        type: string
+      - description: Position data
+        in: body
+        name: position
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.PositionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Resource position updated successfully
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to update resource position
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Set resource position
+      tags:
+      - resources
+  /runs/:
+    get:
+      description: Returns a list of all runs from the MCP system
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of MCP runs
+          schema:
+            items:
+              $ref: '#/definitions/models.Run'
+            type: array
+        "500":
+          description: Failed to fetch runs
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get all runs
+      tags:
+      - runs
+  /runs/{runId}/position:
+    post:
+      consumes:
+      - application/json
+      description: Sets the position of a specific run on the map.
+      parameters:
+      - description: Run ID
+        in: path
+        name: runId
+        required: true
+        type: string
+      - description: Position data
+        in: body
+        name: position
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.PositionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Position set successfully
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid input
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to set run position
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Set run position
+      tags:
+      - runs
   /system/status:
     get:
       description: Returns system health information including database status, MCP

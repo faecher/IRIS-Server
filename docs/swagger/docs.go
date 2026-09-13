@@ -365,6 +365,162 @@ const docTemplate = `{
                 }
             }
         },
+        "/resources/{resourceId}/position": {
+            "put": {
+                "description": "Updates the position (longitude and latitude) of a specific resource",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "resources"
+                ],
+                "summary": "Set resource position",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Resource ID",
+                        "name": "resourceId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Position data",
+                        "name": "position",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PositionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Resource position updated successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to update resource position",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/runs/": {
+            "get": {
+                "description": "Returns a list of all runs from the MCP system",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "runs"
+                ],
+                "summary": "Get all runs",
+                "responses": {
+                    "200": {
+                        "description": "List of MCP runs",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.Run"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to fetch runs",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/runs/{runId}/position": {
+            "post": {
+                "description": "Sets the position of a specific run on the map.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "runs"
+                ],
+                "summary": "Set run position",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Run ID",
+                        "name": "runId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Position data",
+                        "name": "position",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PositionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Position set successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to set run position",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/system/status": {
             "get": {
                 "description": "Returns system health information including database status, MCP connectivity, uptime, and active tracker count",
@@ -635,6 +791,17 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "handlers.PositionRequest": {
+            "type": "object",
+            "properties": {
+                "lat": {
+                    "type": "number"
+                },
+                "long": {
+                    "type": "number"
+                }
+            }
+        },
         "models.BaseTracker": {
             "type": "object",
             "properties": {
@@ -664,11 +831,18 @@ const docTemplate = `{
                 "api_key": {
                     "type": "string"
                 },
+                "delete_markers_on_unassign": {
+                    "type": "boolean"
+                },
                 "enabled": {
                     "type": "boolean"
                 },
                 "operation_id": {
                     "type": "string"
+                },
+                "sentNotEnabledWarning": {
+                    "description": "internal flag to track if the \"not enabled\" warning has been logged",
+                    "type": "boolean"
                 },
                 "siteplan_id": {
                     "type": "string"
@@ -745,11 +919,61 @@ const docTemplate = `{
                 }
             }
         },
+        "models.Run": {
+            "type": "object",
+            "properties": {
+                "active": {
+                    "type": "boolean"
+                },
+                "address": {
+                    "type": "string"
+                },
+                "deleted": {
+                    "type": "boolean"
+                },
+                "hasPatient": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "lat": {
+                    "type": "number"
+                },
+                "long": {
+                    "type": "number"
+                },
+                "nr": {
+                    "type": "integer"
+                },
+                "obj": {
+                    "type": "string"
+                },
+                "operation": {
+                    "$ref": "#/definitions/models.MCPOperation"
+                },
+                "place": {
+                    "type": "string"
+                },
+                "text": {
+                    "type": "string"
+                },
+                "unsetPosition": {
+                    "type": "boolean"
+                }
+            }
+        },
         "models.TableauResource": {
             "type": "object",
             "properties": {
                 "id": {
                     "type": "string"
+                },
+                "lat": {
+                    "type": "number"
+                },
+                "lon": {
+                    "type": "number"
                 },
                 "operationId": {
                     "type": "string"
@@ -759,6 +983,9 @@ const docTemplate = `{
                 },
                 "status": {
                     "type": "integer"
+                },
+                "unsetPosition": {
+                    "type": "boolean"
                 }
             }
         }

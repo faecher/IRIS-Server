@@ -13,10 +13,13 @@ type Resource struct {
 
 // TableauResource represents an MCP resource that is present in a specific operation
 type TableauResource struct {
-	ID          uuid.UUID `db:"tableau_resource_id" json:"id"`
-	OperationID uuid.UUID `db:"operation_id"        json:"operationId"`
-	Resource    Resource  `json:"resource"`
-	Status      uint16    `db:"status"              json:"status"`
+	Position
+
+	ID            uuid.UUID `db:"tableau_resource_id" json:"id"`
+	OperationID   uuid.UUID `db:"operation_id"        json:"operationId"`
+	Resource      Resource  `json:"resource"`
+	Status        uint16    `db:"status"              json:"status"`
+	UnsetPosition bool      `db:"unset_position"      json:"unsetPosition"`
 }
 
 // ResourceMarker associates a resource with an MCP marker on a specific siteplan
