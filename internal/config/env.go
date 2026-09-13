@@ -59,13 +59,20 @@ type WebServerConfig struct {
 	AllowCORS bool `env:"SERVER_ALLOW_CORS" envDefault:"false"` // Allow Cross-Origin Resource Sharing (CORS) for all origins
 }
 
+// Geocoding configuration
+type GeocodingConfig struct {
+	Scheme string `env:"MCP_GEOCODING_SCHEME" envDefault:"https"`
+	Host   string `env:"MCP_GEOCODING_HOST"   envDefault:"nominatim.openstreetmap.org"`
+}
+
 // Config is the main configuration struct
 type Config struct {
-	SQL     SQLConfig
-	Server  WebServerConfig
-	Traccar TraccarConfig
-	MCP     MCPConfig
-	Update  UpdateConfig
+	SQL       SQLConfig
+	Server    WebServerConfig
+	Traccar   TraccarConfig
+	MCP       MCPConfig
+	Geocoding GeocodingConfig
+	Update    UpdateConfig
 }
 
 // Load reads environment variables and populates the Config struct
