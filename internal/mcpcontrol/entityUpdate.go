@@ -3,6 +3,7 @@
 package mcpcontrol
 
 import (
+	"IRIS-Server/internal/config"
 	"IRIS-Server/internal/models"
 	"IRIS-Server/internal/repository"
 	"context"
@@ -40,7 +41,7 @@ func UpdateMCPResourcesInDB() error {
 }
 
 // UpdateMCPRunsInDB fetches runs from the MCP system and updates/inserts them into the local database
-func UpdateMCPRunsInDB() error {
+func UpdateMCPRunsInDB(cfg config.GeocodingConfig) error {
 	runs, err := getMCPRuns()
 	if err != nil {
 		return fmt.Errorf("failed to get MCP runs: %w", err)
@@ -54,7 +55,7 @@ func UpdateMCPRunsInDB() error {
 
 		if oldRun == nil || oldRun.Street != run.Street || oldRun.House != run.House || oldRun.City != run.City {
 			// get coordinates for the given address
-			latitude, longitude, err := getCoordinates(run)
+			latitude, longitude, err := getCoordinates(run, cfg)
 			if err != nil {
 				slog.Error("Failed to get coordinates for run", "runID", run.ID.String(), "error", err, "address", run.Street+" "+run.House)
 				run.UnsetPosition = true
@@ -80,9 +81,9 @@ func UpdateMCPRunsInDB() error {
 	return nil
 }
 
-func getCoordinates(run models.Run) (float64, float64, error) {
+func getCoordinates(run models.Run, cfg config.GeocodingConfig) (float64, float64, error) {
 	// access nominatim.org api, see https://nominatim.org/release-docs/develop/api/Search/ for more information
-	query := buildNominatimURL(run)
+	query := buildNominatimURL(run, cfg)
 
 	ctx, cancel := context.WithTimeout(context.Background(), positionRequestTimeout)
 	defer cancel()
@@ -124,7 +125,7 @@ func getCoordinates(run models.Run) (float64, float64, error) {
 	return results[0].Lat, results[0].Lon, nil
 }
 
-func buildNominatimURL(run models.Run) string {
+func buildNominatimURL(run models.Run, cfg config.GeocodingConfig) string {
 	params := url.Values{}
 	params.Set("street", run.Street+" "+run.House)
 	params.Set("city", run.City)
@@ -132,8 +133,8 @@ func buildNominatimURL(run models.Run) string {
 	params.Set("limit", "1")
 
 	u := url.URL{
-		Scheme:   "https",
-		Host:     "nominatim.openstreetmap.org",
+		Scheme:   cfg.Scheme,
+		Host:     cfg.Host,
 		Path:     "/search",
 		RawQuery: params.Encode(),
 	}
