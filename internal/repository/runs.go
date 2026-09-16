@@ -173,3 +173,15 @@ func UpsertRun(run *models.Run) error {
 
 	return nil
 }
+
+// DeleteAllRuns deletes all runs from the database by running truncate table runs
+func DeleteAllRuns() error {
+	const sql = `TRUNCATE TABLE runs`
+	
+	_, err := DBConnPool.Exec(context.Background(), sql)
+	if err != nil {
+		return fmt.Errorf("failed to update run position: %w", err)
+	}
+
+	return nil
+}
