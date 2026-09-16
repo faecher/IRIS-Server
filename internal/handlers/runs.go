@@ -14,6 +14,7 @@ func RunsHandler(router *gin.Engine) {
 	runsGroup := router.Group("/runs")
 
 	runsGroup.GET("/", listRuns)
+	runsGroup.DELETE("/", deleteAllRuns)
 	runsGroup.POST("/:runId/position", setRunPosition)
 }
 
@@ -68,4 +69,27 @@ func setRunPosition(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Position set successfully"})
+}
+
+
+// deleteAllRuns deletes all stored MCP runs
+// @Summary Delete all runs
+// @Description Returns a list of all runs from the MCP system
+// @Tags runs
+// @Produce json
+// @Success 200 {object} map[string]string "delete successful"
+// @Failure 500 {object} map[string]string "Failed to delete all runs"
+// @Router /runs/ [delete]
+func deleteAllRuns(c *gin.Context) {
+	err := repository.DeleteAllRuns(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to delete all runs",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": "delete successful",
+	})
 }
