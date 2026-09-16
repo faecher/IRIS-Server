@@ -59,7 +59,7 @@ type WebServerConfig struct {
 	AllowCORS bool `env:"SERVER_ALLOW_CORS" envDefault:"false"` // Allow Cross-Origin Resource Sharing (CORS) for all origins
 }
 
-// Geocoding configuration
+// GeocodingConfig stores the configuration for nominatim
 type GeocodingConfig struct {
 	Scheme string `env:"MCP_GEOCODING_SCHEME" envDefault:"https"`
 	Host   string `env:"MCP_GEOCODING_HOST"   envDefault:"nominatim.openstreetmap.org"`
