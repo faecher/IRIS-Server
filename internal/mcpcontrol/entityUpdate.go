@@ -132,11 +132,11 @@ func buildNominatimURL(run models.Run, cfg config.GeocodingConfig) string {
 	params.Set("format", "json")
 	params.Set("limit", "1")
 
-	geocodingUrl := url.URL{
+	geocodingURL := url.URL{
 		Scheme:   cfg.Scheme,
 		Host:     cfg.Host,
 		Path:     "/search",
 		RawQuery: params.Encode(),
 	}
-	return geocodingUrl.String()
+	return geocodingURL.String()
 }
