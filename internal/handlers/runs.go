@@ -81,7 +81,7 @@ func setRunPosition(c *gin.Context) {
 // @Failure 500 {object} map[string]string "Failed to delete all runs"
 // @Router /runs/ [delete]
 func deleteAllRuns(c *gin.Context) {
-	err := repository.DeleteAllRuns(c.Request.Context())
+	err := repository.DeleteAllRuns()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to delete all runs",
