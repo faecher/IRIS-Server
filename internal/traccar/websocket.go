@@ -45,6 +45,15 @@ const (
 	writeWait  = 10 * time.Second
 )
 
+// traccarStatus holds the current status of the Traccar websocket connection
+var traccarStatus = "Disabled"
+
+// GetTraccarStatus returns the current status of the Traccar websocket connection
+// Possible values: "ok", "Initializing", "Disabled", or an error message
+func GetTraccarStatus() string {
+	return traccarStatus
+}
+
 // RunTraccarWebsocketListener connects to the Traccar websocket and handles incoming messages.
 // This function will run until the given context is Done
 func RunTraccarWebsocketListener(ctx context.Context, cfg config.TraccarConfig) {
@@ -52,6 +61,7 @@ func RunTraccarWebsocketListener(ctx context.Context, cfg config.TraccarConfig) 
 
 	socketURL := getSocketURL(cfg)
 	slog.Info("Connecting to Traccar websocket at " + socketURL)
+	traccarStatus = "Initializing"
 
 	for ctx.Err() == nil {
 		cookies, err := getSessionCookie(ctx, cfg)
@@ -63,6 +73,7 @@ func RunTraccarWebsocketListener(ctx context.Context, cfg config.TraccarConfig) 
 				"auth_method", cfg.AuthToken != "",
 				"socket_url", socketURL,
 			)
+			traccarStatus = "Traccar auth failed: " + err.Error()
 
 			backoff, err = waitWithContext(ctx, backoff)
 			if err != nil {
@@ -78,6 +89,7 @@ func RunTraccarWebsocketListener(ctx context.Context, cfg config.TraccarConfig) 
 		}
 		if err != nil {
 			slog.Error("Error connecting to Traccar websocket", "error", err, "retry_in", backoff)
+			traccarStatus = "Error connecting to Traccar websocket: " + err.Error()
 
 			backoff, err = waitWithContext(ctx, backoff)
 			if err != nil {
@@ -96,6 +108,7 @@ func RunTraccarWebsocketListener(ctx context.Context, cfg config.TraccarConfig) 
 		}
 
 		slog.Warn("Traccar websocket ended, reconnecting", "error", err, "retry_in", backoff)
+		traccarStatus = "Traccar websocket ended, reconnecting: " + err.Error()
 
 		backoff, err = waitWithContext(ctx, backoff)
 		if err != nil {
