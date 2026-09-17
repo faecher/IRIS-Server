@@ -32,7 +32,7 @@ func GetAllRuns() ([]models.Run, error) {
 	}
 	defer rows.Close()
 
-	var runs []models.Run
+	var runs = []models.Run{}
 	for rows.Next() {
 		var run models.Run
 		err := rows.Scan(
@@ -177,7 +177,7 @@ func UpsertRun(run *models.Run) error {
 // DeleteAllRuns deletes all runs from the database by running truncate table runs
 func DeleteAllRuns() error {
 	const sql = `TRUNCATE TABLE runs`
-	
+
 	_, err := DBConnPool.Exec(context.Background(), sql)
 	if err != nil {
 		return fmt.Errorf("failed to update run position: %w", err)

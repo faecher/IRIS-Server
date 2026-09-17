@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"IRIS-Server/internal/models"
 	"IRIS-Server/internal/repository"
 	"log/slog"
 	"net/http"
@@ -27,7 +26,6 @@ func RunsHandler(router *gin.Engine) {
 // @Failure 500 {object} map[string]string "Failed to fetch runs"
 // @Router /runs/ [get]
 func listRuns(c *gin.Context) {
-	var runs []models.Run
 	runs, err := repository.GetAllRuns()
 	if err != nil {
 		slog.Error("Failed to fetch runs", "error", err)
