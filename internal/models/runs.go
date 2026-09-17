@@ -6,7 +6,7 @@ import "github.com/gofrs/uuid/v5"
 
 // Run represents an MCP run that is stored locally and returned by the API.
 type Run struct {
-	OperationID uuid.UUID    `db:"operation_id"      json:"-"`
+	OperationID uuid.UUID    `db:"operation_id" json:"-"`
 	Operation   MCPOperation `json:"operation"`
 
 	ID            uuid.UUID `db:"run_id"             json:"id"`

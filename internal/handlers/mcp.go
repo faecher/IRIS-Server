@@ -58,8 +58,6 @@ func getMCPOperations(c *gin.Context) {
 // @Failure 400 {object} map[string]string "Invalid operation ID or operation not found in MCP"
 // @Failure 500 {object} map[string]string "Failed to save operation"
 // @Router /mcp/operations/set/{id} [post]
-//
-//nolint:dupl
 func setMCPOperation(c *gin.Context) {
 	operationID, err := uuid.FromString(c.Param("id"))
 	if err != nil {
@@ -136,8 +134,6 @@ func getMCPSiteplans(c *gin.Context) {
 // @Failure 400 {object} map[string]string "Invalid siteplan ID or siteplan not found in MCP"
 // @Failure 500 {object} map[string]string "Failed to save siteplan"
 // @Router /mcp/siteplans/set/{id} [post]
-//
-//nolint:dupl
 func setMCPSiteplan(c *gin.Context) {
 	siteplanID, err := uuid.FromString(c.Param("id"))
 	if err != nil {

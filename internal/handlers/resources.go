@@ -10,6 +10,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const message = "message"
+
 // ResourcesHandler registers resource-related HTTP endpoints
 func ResourcesHandler(router *gin.Engine) {
 	resourcesGroup := router.Group("/resources")
@@ -67,7 +69,7 @@ func setResourcePosition(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Resource position updated successfully"})
+	c.JSON(http.StatusOK, gin.H{message: "Resource position updated successfully"})
 }
 
 // resetResourcePosition resets the position of a specific resource
@@ -87,5 +89,5 @@ func resetResourcePosition(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Resource position reset successfully"})
+	c.JSON(http.StatusOK, gin.H{message: "Resource position reset successfully"})
 }

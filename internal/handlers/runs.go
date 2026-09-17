@@ -68,9 +68,8 @@ func setRunPosition(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Position set successfully"})
+	c.JSON(http.StatusOK, gin.H{message: "Position set successfully"})
 }
-
 
 // deleteAllRuns deletes all stored MCP runs
 // @Summary Delete all runs
