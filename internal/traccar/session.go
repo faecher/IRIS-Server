@@ -15,6 +15,7 @@ import (
 
 func runSocketSession(ctx context.Context, conn *websocket.Conn) error {
 	slog.Info("Connected to Traccar websocket, listening for messages...")
+	traccarStatus = "ok"
 
 	// set up ping/pong handlers to detect dead connections
 	err := conn.SetReadDeadline(time.Now().Add(pongWait))

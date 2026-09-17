@@ -6,6 +6,7 @@ package handlers
 import (
 	"IRIS-Server/internal/mcpcontrol"
 	"IRIS-Server/internal/repository"
+	"IRIS-Server/internal/traccar"
 	"net/http"
 	"time"
 
@@ -41,9 +42,12 @@ func getSystemStatus(c *gin.Context) {
 		return
 	}
 
+	traccarStatus := traccar.GetTraccarStatus()
+	isTraccarOk := traccarStatus == "ok" || traccarStatus == "Initializing" || traccarStatus == "Disabled"
+
 	statusString := "ok"
-	if dbStatus != nil || mcpStatus != nil {
-		statusString = "error"
+	if dbStatus != nil || mcpStatus != nil || isTraccarOk {
+		statusString = "unhealthy"
 	}
 
 	status := gin.H{
@@ -51,6 +55,7 @@ func getSystemStatus(c *gin.Context) {
 		"uptime":          time.Since(startTime).String(),
 		"database":        systemStatus(dbStatus),
 		"mcp":             systemStatus(mcpStatus),
+		"traccar":         traccarStatus,
 		"active-trackers": activeTrackers,
 	}
 
