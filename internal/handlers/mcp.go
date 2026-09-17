@@ -88,6 +88,13 @@ func setMCPOperation(c *gin.Context) {
 		return
 	}
 
+	// clear all runs from the DB
+	err = repository.DeleteAllRuns()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to clear runs: " + err.Error()})
+		return
+	}
+
 	c.Status(http.StatusOK)
 }
 
