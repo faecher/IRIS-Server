@@ -100,14 +100,10 @@ func updateTrackers(ctx context.Context, message traccarMessage) {
 
 		if trackerID == uuid.Nil {
 			err = repository.CreateTraccarTracker(ctx, &models.TraccarTracker{
-				BaseTracker: models.BaseTracker{
-					Name:    device.Name,
-					Battery: -1,
-					Position: models.Position{
-						Latitude:  0.0,
-						Longitude: 0.0,
-					},
-				},
+				Name:      device.Name,
+				Battery:   -1,
+				Latitude:  0.0,
+				Longitude: 0.0,
 				TraccarID: device.ID,
 			})
 			slog.Info("Created new tracker for Traccar device", "traccar_id", device.ID)
@@ -135,11 +131,9 @@ func updateTrackers(ctx context.Context, message traccarMessage) {
 			batteryLevel = -1
 		}
 		tracker := models.BaseTracker{
-			ID: trackerID,
-			Position: models.Position{
-				Latitude:  position.Latitude,
-				Longitude: position.Longitude,
-			},
+			ID:         trackerID,
+			Latitude:   position.Latitude,
+			Longitude:  position.Longitude,
 			Battery:    int16(batteryLevel),
 			LastUpdate: position.ServerTime,
 		}

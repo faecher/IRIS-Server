@@ -62,12 +62,10 @@ func handleChirpstackWebhook(c *gin.Context) {
 
 	// Parse Chirpstack uplink message into tracker model
 	tracker := models.BaseTracker{
-		ID:      trackerID,
-		Battery: -1,
-		Position: models.Position{
-			Latitude:  math.Inf(-1),
-			Longitude: math.Inf(-1),
-		},
+		ID:        trackerID,
+		Battery:   -1,
+		Latitude:  math.Inf(-1),
+		Longitude: math.Inf(-1),
 	}
 	err = chirpstack.ParseChirpstackTrackerMessage(upMessage, &tracker)
 	if err != nil {

@@ -103,8 +103,8 @@ func CheckDBVersionAndInit(conn *pgxpool.Pool, skipInit bool) (bool, error) {
 	var version int
 
 	err := conn.QueryRow(context.Background(), "SELECT COALESCE(MAX(version), 0) FROM schema_versions").Scan(&version)
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) {
+	pgErr, ok := errors.AsType[*pgconn.PgError](err)
+	if ok {
 		slog.Error("Database error", "message", pgErr.Message)
 	}
 

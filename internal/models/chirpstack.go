@@ -33,9 +33,7 @@ type ChirpstackData struct {
 // NewChirpstackTracker creates a new Chirpstack tracker instance
 func NewChirpstackTracker(devEUI, name string) *ChirpstackTracker {
 	return &ChirpstackTracker{
-		BaseTracker: BaseTracker{
-			Name: name,
-		},
+		Name:   name,
 		DevEUI: devEUI,
 	}
 }
