@@ -21,6 +21,9 @@ import (
 // ErrLocationNotFound indicates that the location for a given run could not be found
 var ErrLocationNotFound = errors.New("location not found")
 
+// ErrNomatimNon200 indicates that the Nominatim API returned a non-200 status code
+var ErrNomatimNon200 = errors.New("nominatim API returned non-200 status")
+
 var positionRequestTimeout = 5 * time.Second
 
 // UpdateMCPResourcesInDB fetches resources from the MCP system and updates/inserts them into the local database
@@ -103,7 +106,7 @@ func getCoordinates(run models.Run, cfg config.GeocodingConfig) (float64, float6
 
 	responseStatus := resp.StatusCode
 	if responseStatus != http.StatusOK {
-		return 0, 0, fmt.Errorf("nominatim API returned non-200 status: %d", responseStatus)
+		return 0, 0, fmt.Errorf("%w: %d", ErrNomatimNon200, responseStatus)
 	}
 
 	// Parse the JSON response

@@ -208,7 +208,15 @@ func UpsertResource(resource *models.TableauResource) error {
 
 	// Then, upsert the tableau_resource
 	tableauSQL := `
-	INSERT INTO tableau_resources (tableau_resource_id, resource_id, operation_id, status, position_longitude, position_latitude, unset_position) 
+	INSERT INTO tableau_resources (
+		tableau_resource_id,
+		resource_id,
+		operation_id,
+		status,
+		position_longitude,
+		position_latitude,
+		unset_position
+	) 
 	VALUES ($1, $2, $3, $4, $5, $6, $7) 
 	ON CONFLICT (resource_id, operation_id) DO UPDATE 
 	SET status = EXCLUDED.status,
