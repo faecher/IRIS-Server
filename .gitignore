@@ -193,3 +193,4 @@ cython_debug/
 
 # Go build artifacts
 cmd/iris-server/__debug_bin.exe
+iris-server
