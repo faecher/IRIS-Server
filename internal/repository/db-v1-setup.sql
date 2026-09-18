@@ -90,8 +90,8 @@ CREATE TABLE tableau_resources (
 	operation_id uuid NOT NULL,
 	status SMALLINT NOT NULL,
 
-	position_longitude DOUBLE PRECISION,
-	position_latitude DOUBLE PRECISION,
+	position_longitude DOUBLE PRECISION default 0,
+	position_latitude DOUBLE PRECISION default 0,
 	unset_position boolean default true,
 
 	-- System

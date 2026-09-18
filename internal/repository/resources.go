@@ -212,27 +212,18 @@ func UpsertResource(resource *models.TableauResource) error {
 		tableau_resource_id,
 		resource_id,
 		operation_id,
-		status,
-		position_longitude,
-		position_latitude,
-		unset_position
+		status
 	) 
-	VALUES ($1, $2, $3, $4, $5, $6, $7) 
+	VALUES ($1, $2, $3, $4)
 	ON CONFLICT (resource_id, operation_id) DO UPDATE 
 	SET status = EXCLUDED.status,
-	    tableau_resource_id = EXCLUDED.tableau_resource_id,
-	    position_longitude = EXCLUDED.position_longitude,
-	    position_latitude = EXCLUDED.position_latitude,
-	    unset_position = EXCLUDED.unset_position`
+	    tableau_resource_id = EXCLUDED.tableau_resource_id`
 
 	_, err = DBConnPool.Exec(context.Background(), tableauSQL,
 		resource.ID,
 		resource.Resource.ID,
 		resource.OperationID,
 		resource.Status,
-		resource.Longitude,
-		resource.Latitude,
-		resource.UnsetPosition,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to upsert tableau resource: %w", err)
