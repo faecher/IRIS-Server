@@ -232,8 +232,8 @@ func UpsertResource(resource *models.TableauResource) error {
 	return nil
 }
 
-// UpdateResourcePosition updates the position (latitude and longitude) of a specific MCP resource
-func UpdateResourcePosition(resourceID string, latitude, longitude float64) error {
+// UpdateResourcePosition updates the position (longitude and latitude) of a specific MCP resource
+func UpdateResourcePosition(resourceID string, longitude, latitude float64) error {
 	SQL := `
 	UPDATE tableau_resources
 	SET position_longitude = $1, position_latitude = $2, unset_position = FALSE
